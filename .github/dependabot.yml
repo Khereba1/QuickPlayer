@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # يفتح طلبات تحديث تلقائية لإصدارات أدوات البناء (مثل التحذيرات اللي ظهرت قبل كده)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

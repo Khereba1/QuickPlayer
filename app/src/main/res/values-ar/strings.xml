@@ -1,0 +1,151 @@
+<resources>
+    <string name="developer_label">المطوّر</string>
+
+    <string name="tab_audio">الصوت</string>
+    <string name="tab_video">الفيديو</string>
+    <string name="tab_playlists">القوائم</string>
+    <string name="tab_settings">الإعدادات</string>
+
+    <string name="search_hint">ابحث بالاسم…</string>
+    <string name="items_count">%1$d عنصر</string>
+    <string name="play_all">تشغيل الكل</string>
+    <string name="shuffle">عشوائي</string>
+    <string name="sort">ترتيب</string>
+    <string name="sort_newest">الأحدث</string>
+    <string name="sort_name">الاسم</string>
+    <string name="sort_duration">المدة</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_favorites">المفضلة</string>
+    <string name="folder_other">أخرى</string>
+    <string name="open_files">فتح ملفات</string>
+    <string name="refresh">تحديث</string>
+    <string name="search">بحث</string>
+
+    <string name="perm_needed">محتاج إذن الوصول لملفات الصوت والفيديو عشان أعرض مكتبتك.</string>
+    <string name="perm_grant">السماح بالوصول</string>
+    <string name="perm_open_settings">فتح إعدادات التطبيق</string>
+
+    <string name="empty_list">مفيش ملفات هنا.</string>
+    <string name="empty_playlists_hint">لسه معندكش قوائم تشغيل. اعمل واحدة، وبعدين ضيف ملفات ليها من القائمة ⋮ اللي جنب أي ملف.</string>
+    <string name="empty_playlist">القائمة فاضية. ضيف ملفات ليها من القائمة ⋮ اللي جنب أي ملف.</string>
+
+    <string name="menu_play_next">تشغيل بعده</string>
+    <string name="menu_add_queue">إضافة لقائمة الانتظار</string>
+    <string name="menu_add_playlist">إضافة لقائمة تشغيل</string>
+    <string name="menu_remove_playlist">حذف من هذه القائمة</string>
+
+    <string name="playlist_new">قائمة تشغيل جديدة</string>
+    <string name="playlist_new_plus">+ قائمة جديدة</string>
+    <string name="playlist_name_hint">اسم القائمة</string>
+    <string name="create">إنشاء</string>
+    <string name="cancel">إلغاء</string>
+    <string name="delete">حذف</string>
+    <string name="close">إغلاق</string>
+    <string name="delete_playlist_title">حذف القائمة؟</string>
+    <string name="delete_playlist_msg">هتتحذف القائمة \"%1$s\". الملفات نفسها مش هتتمسح.</string>
+    <string name="add_to_playlist_title">إضافة إلى قائمة تشغيل</string>
+    <string name="favorites_title">المفضلة</string>
+    <string name="recent_title">تم تشغيله مؤخراً</string>
+    <string name="back">رجوع</string>
+    <string name="more">المزيد</string>
+    <string name="favorite">مفضلة</string>
+
+    <string name="now_playing">يعمل الآن</string>
+    <string name="queue_title">قائمة الانتظار</string>
+    <string name="queue_empty">قائمة الانتظار فاضية.</string>
+    <string name="remove">إزالة</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="next">التالي</string>
+    <string name="previous">السابق</string>
+    <string name="repeat">تكرار</string>
+
+    <string name="speed_title">سرعة التشغيل</string>
+    <string name="sleep_title">مؤقت النوم</string>
+    <string name="sleep_off">إيقاف</string>
+    <string name="sleep_minutes">%1$d دقيقة</string>
+    <string name="sleep_end_track">نهاية هذا المقطع</string>
+    <string name="sleep_label">نوم %1$d د</string>
+    <string name="sleep_short">مؤقت</string>
+    <string name="sleep_end_short">نوم: نهاية المقطع</string>
+
+    <string name="equalizer">الإكولايزر</string>
+    <string name="eq_enable">تفعيل المؤثرات الصوتية</string>
+    <string name="eq_presets">إعدادات جاهزة</string>
+    <string name="eq_bass">تعزيز الباس</string>
+    <string name="eq_boost">رفع مستوى الصوت</string>
+    <string name="eq_reset">إعادة ضبط</string>
+    <string name="eq_unavailable">المؤثرات الصوتية غير متاحة على الجهاز، أو المشغل لسه ماشتغلش. شغّل أي ملف الأول.</string>
+
+    <string name="tracks_title">الصوت والترجمة</string>
+    <string name="audio_tracks">مسار الصوت</string>
+    <string name="subtitles">الترجمة</string>
+    <string name="subtitles_off">إيقاف</string>
+    <string name="subtitles_add">إضافة ملف ترجمة…</string>
+    <string name="tracks_none">غير متاح</string>
+
+    <string name="lock">قفل التحكم</string>
+    <string name="unlock">فتح القفل</string>
+    <string name="aspect">أبعاد الصورة</string>
+    <string name="aspect_fit">ملائم</string>
+    <string name="aspect_fill">ملء الشاشة</string>
+    <string name="aspect_zoom">قص</string>
+    <string name="rotate">تدوير</string>
+    <string name="pip">نافذة عائمة</string>
+    <string name="seek_back">رجوع 10 ثواني</string>
+    <string name="seek_forward">تقديم 10 ثواني</string>
+    <string name="brightness">السطوع</string>
+    <string name="volume">الصوت</string>
+    <string name="controls_locked">التحكم مقفول</string>
+
+    <string name="settings_language">اللغة</string>
+    <string name="lang_system">لغة النظام</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="lang_english">English</string>
+    <string name="settings_appearance">المظهر</string>
+    <string name="theme_title">الثيم</string>
+    <string name="theme_system">النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    <string name="accent_title">لون التطبيق</string>
+    <string name="accent_system">ألوان الخلفية</string>
+    <string name="accent_indigo">نيلي</string>
+    <string name="accent_teal">تركواز</string>
+    <string name="accent_rose">وردي</string>
+    <string name="accent_orange">برتقالي</string>
+    <string name="accent_green">أخضر</string>
+    <string name="accent_blue">أزرق</string>
+    <string name="amoled">أسود خالص</string>
+    <string name="amoled_desc">خلفية سوداء تماماً في الثيم الداكن (توفر بطارية على شاشات OLED).</string>
+
+    <string name="settings_playback">التشغيل</string>
+    <string name="resume_title">الاستكمال من آخر موضع</string>
+    <string name="resume_desc">الفيديو والصوت الطويل (أكتر من 10 دقايق) يكمل من آخر نقطة وقفت عندها.</string>
+    <string name="video_bg_title">تشغيل الفيديو كصوت في الخلفية</string>
+    <string name="video_bg_desc">لما تخرج من شاشة الفيديو أو من التطبيق، الصوت يكمل.</string>
+    <string name="auto_pip_title">النافذة العائمة تلقائياً</string>
+    <string name="auto_pip_desc">يتحول الفيديو لنافذة صغيرة عائمة لما تضغط زر الرئيسية.</string>
+
+    <string name="settings_library">المكتبة</string>
+    <string name="hide_rec_title">إخفاء تسجيلات المكالمات والملاحظات الصوتية</string>
+    <string name="hide_rec_desc">عشان ماتظهرش وسط قائمة الصوت.</string>
+    <string name="hidden_folders_title">المجلدات المخفية</string>
+    <string name="hidden_folders_desc">اختار مجلدات تتخفي من المكتبة.</string>
+    <string name="rescan">إعادة فحص المكتبة</string>
+
+    <string name="settings_about">حول التطبيق</string>
+    <string name="privacy_note">التطبيق ده معندوش صلاحية إنترنت. مستحيل يبعت أي حاجة خارج جهازك.</string>
+    <string name="version_fmt">الإصدار %1$s</string>
+    <string name="diagnostics">التشخيص</string>
+    <string name="view_log">عرض سجل الأخطاء</string>
+    <string name="log_empty">السجل فاضي. مفيش أخطاء متسجلة.</string>
+    <string name="log_copy">نسخ</string>
+    <string name="log_share">مشاركة</string>
+    <string name="log_clear">مسح</string>
+
+    <string name="msg_cannot_play">مش قادر أشغّل الملف ده (%1$s).</string>
+    <string name="msg_subtitle_added">اتضافت الترجمة.</string>
+    <string name="msg_subtitle_failed">معرفتش أضيف ملف الترجمة.</string>
+    <string name="msg_pip_unsupported">النافذة العائمة غير مدعومة على الجهاز ده.</string>
+    <string name="ok">تمام</string>
+</resources>
