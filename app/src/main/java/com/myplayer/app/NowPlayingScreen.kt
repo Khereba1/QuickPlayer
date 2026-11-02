@@ -194,7 +194,7 @@ fun NowPlayingScreen(vm: PlayerViewModel) {
 
     if (showQueue) QueueSheet(vm) { showQueue = false }
     if (showEq) EqualizerSheet { showEq = false }
-    if (showSpeed) SpeedDialog(vm.speed, { vm.setSpeed(it) }) { showSpeed = false }
+    if (showSpeed) SpeedDialog(vm.speed, { vm.changeSpeed(it) }) { showSpeed = false }
     if (showSleep) SleepDialog(vm) { showSleep = false }
 }
 

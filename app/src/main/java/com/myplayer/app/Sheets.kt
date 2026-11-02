@@ -128,7 +128,7 @@ fun EqualizerSheet(onDismiss: () -> Unit) {
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.eq_enable), modifier = Modifier.weight(1f))
-                    Switch(checked = AudioFx.enabled, onCheckedChange = { AudioFx.setEnabled(it) })
+                    Switch(checked = AudioFx.enabled, onCheckedChange = { AudioFx.enable(it) })
                 }
                 if (AudioFx.presets.isNotEmpty()) {
                     Text(
@@ -177,7 +177,7 @@ fun EqualizerSheet(onDismiss: () -> Unit) {
                     )
                     Slider(
                         value = AudioFx.bass.toFloat(),
-                        onValueChange = { AudioFx.setBass(it.toInt()) },
+                        onValueChange = { AudioFx.changeBass(it.toInt()) },
                         valueRange = 0f..1000f,
                     )
                 }
@@ -188,7 +188,7 @@ fun EqualizerSheet(onDismiss: () -> Unit) {
                 )
                 Slider(
                     value = AudioFx.boost.toFloat(),
-                    onValueChange = { AudioFx.setBoost(it.toInt()) },
+                    onValueChange = { AudioFx.changeBoost(it.toInt()) },
                     valueRange = 0f..1500f,
                 )
             }

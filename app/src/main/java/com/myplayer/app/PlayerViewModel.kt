@@ -622,7 +622,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setSpeed(value: Float) {
+    fun changeSpeed(value: Float) {
         controller?.setPlaybackSpeed(value)
     }
 

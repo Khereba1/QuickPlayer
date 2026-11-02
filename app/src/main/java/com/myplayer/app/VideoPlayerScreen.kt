@@ -440,6 +440,6 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     }
 
     if (showTracks) TracksDialog(vm, onAddSubtitle = { subtitlePicker.launch(arrayOf("*/*")) }) { showTracks = false }
-    if (showSpeed) SpeedDialog(vm.speed, { vm.setSpeed(it) }) { showSpeed = false }
+    if (showSpeed) SpeedDialog(vm.speed, { vm.changeSpeed(it) }) { showSpeed = false }
     if (showSleep) SleepDialog(vm) { showSleep = false }
 }

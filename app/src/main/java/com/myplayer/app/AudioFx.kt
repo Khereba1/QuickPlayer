@@ -142,7 +142,7 @@ object AudioFx {
         }
     }
 
-    fun setEnabled(value: Boolean) {
+    fun enable(value: Boolean) {
         enabled = value
         applyEnabled()
         persist()
@@ -160,7 +160,7 @@ object AudioFx {
         } catch (t: Throwable) {
             AppLog.log("FX", "setBand failed", t)
         }
-        if (!enabled) setEnabled(true) else persist()
+        if (!enabled) enable(true) else persist()
     }
 
     fun usePreset(index: Int) {
@@ -174,10 +174,10 @@ object AudioFx {
         } catch (t: Throwable) {
             AppLog.log("FX", "usePreset failed", t)
         }
-        if (!enabled) setEnabled(true) else persist()
+        if (!enabled) enable(true) else persist()
     }
 
-    fun setBass(value: Int) {
+    fun changeBass(value: Int) {
         bass = value.coerceIn(0, 1000)
         try {
             if (bassSupported) bassFx?.setStrength(bass.toShort())
@@ -185,10 +185,10 @@ object AudioFx {
         } catch (t: Throwable) {
             AppLog.log("FX", "setBass failed", t)
         }
-        if (!enabled && bass > 0) setEnabled(true) else persist()
+        if (!enabled && bass > 0) enable(true) else persist()
     }
 
-    fun setBoost(valueMb: Int) {
+    fun changeBoost(valueMb: Int) {
         boost = valueMb.coerceIn(0, 1500)
         try {
             loud?.setTargetGain(boost)
@@ -196,7 +196,7 @@ object AudioFx {
         } catch (t: Throwable) {
             AppLog.log("FX", "setBoost failed", t)
         }
-        if (!enabled && boost > 0) setEnabled(true) else persist()
+        if (!enabled && boost > 0) enable(true) else persist()
     }
 
     fun reset() {
@@ -209,8 +209,8 @@ object AudioFx {
         } catch (t: Throwable) {
             AppLog.log("FX", "reset failed", t)
         }
-        setBass(0)
-        setBoost(0)
+        changeBass(0)
+        changeBoost(0)
         persist()
     }
 
