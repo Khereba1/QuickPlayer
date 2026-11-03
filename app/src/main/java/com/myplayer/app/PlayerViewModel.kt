@@ -604,6 +604,18 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- السحب الحي (الفيديو بيتحدث وأنت بتسحب) ----------
     private var scrubWasPlaying = false
     private var lastScrubAt = 0L
+    private var scrubTarget = 0L
+    private var scrubExact = false
+
+    // لما إصبعك يقف لحظة: قفزة دقيقة للإطار الصح بالظبط
+    private val exactSeek = Runnable {
+        val c = controller
+        if (c != null) {
+            setFastSeek(false)
+            scrubExact = true
+            c.seekTo(scrubTarget)
+        }
+    }
 
     private fun setFastSeek(fast: Boolean) {
         val c = controller ?: return
@@ -621,6 +633,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         scrubWasPlaying = c.playWhenReady
         if (scrubWasPlaying) c.pause()
         setFastSeek(true)
+        scrubExact = false
         lastScrubAt = 0L
     }
 
@@ -628,15 +641,24 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         val c = controller ?: return
         val target = ms.coerceAtLeast(0L)
         positionMs = target
+        scrubTarget = target
+        if (scrubExact) {
+            setFastSeek(true)
+            scrubExact = false
+        }
         val now = android.os.SystemClock.uptimeMillis()
-        if (now - lastScrubAt >= 90L) {
+        if (now - lastScrubAt >= 100L) {
             lastScrubAt = now
             c.seekTo(target)
         }
+        handler.removeCallbacks(exactSeek)
+        handler.postDelayed(exactSeek, 220L)
     }
 
     fun endScrub(ms: Long) {
         val c = controller ?: return
+        handler.removeCallbacks(exactSeek)
+        scrubExact = false
         setFastSeek(false)
         val target = ms.coerceAtLeast(0L)
         c.seekTo(target)
