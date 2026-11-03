@@ -400,13 +400,13 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(horizontal = 8.dp),
-                                    preview = { t ->
+                                    preview = { t, exact ->
                                         val cur = vm.currentItem
                                         if (cur == null) {
                                             null
                                         } else {
                                             withContext(Dispatchers.IO) {
-                                                FramePreview.frame(ctx, cur, t, (previewH * aspect).roundToInt(), previewH)
+                                                FramePreview.frame(ctx, cur, t, (previewH * aspect).roundToInt(), previewH, exact)
                                             }
                                         }
                                     },

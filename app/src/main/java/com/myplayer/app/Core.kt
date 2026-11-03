@@ -303,7 +303,7 @@ object FramePreview {
     private var key: String? = null
     private var retriever: MediaMetadataRetriever? = null
 
-    fun frame(context: Context, item: MediaItem, timeMs: Long, w: Int, h: Int): Bitmap? {
+    fun frame(context: Context, item: MediaItem, timeMs: Long, w: Int, h: Int, exact: Boolean = false): Bitmap? {
         return synchronized(lock) {
             try {
                 if (item.mediaId != key) {
@@ -331,7 +331,12 @@ object FramePreview {
                         }
                     }
                 }
-                retriever?.getScaledFrameAtTime(timeMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, w, h)
+                retriever?.getScaledFrameAtTime(
+                    timeMs * 1000L,
+                    if (exact) MediaMetadataRetriever.OPTION_CLOSEST else MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                    w,
+                    h,
+                )
             } catch (e: Throwable) {
                 null
             }

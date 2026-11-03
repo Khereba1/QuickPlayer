@@ -114,7 +114,7 @@ fun SeekBar(
     duration: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    preview: (suspend (Long) -> Bitmap?)? = null,
+    preview: (suspend (Long, Boolean) -> Bitmap?)? = null,
     previewAspect: Float = 16f / 9f,
     onDragChange: (Boolean) -> Unit = {},
 ) {
@@ -140,12 +140,15 @@ fun SeekBar(
             )
             if (dragging && duration > 0L) {
                 val target = (dragValue * duration).toLong()
-                val bucket = target / 2000L
+                val bucket = target / 500L
                 val frame by produceState<Bitmap?>(initialValue = null, bucket) {
                     val fn = preview
                     if (fn != null) {
-                        delay(120L)
-                        value = fn(bucket * 2000L)
+                        // أولاً لقطة سريعة (أقرب إطار مفتاحي)، ولو وقفت عن الحركة لحظة بتتبدّل بالإطار الدقيق
+                        delay(60L)
+                        value = fn(bucket * 500L, false)
+                        delay(250L)
+                        value = fn(target, true)
                     }
                 }
                 Surface(
