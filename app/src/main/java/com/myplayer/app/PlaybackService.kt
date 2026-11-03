@@ -67,6 +67,10 @@ class PlaybackService : MediaSessionService() {
             .build()
     }
 
+    private fun markServiceAlive(alive: Boolean) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("svc_alive", alive).commit()
+    }
+
     /** بيوقف التشغيل ويشيل الإشعار. */
     private fun closePlayback(reason: String) {
         AppLog.log("SERVICE", "closing playback: $reason")
@@ -81,6 +85,7 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         AudioFx.init(applicationContext)
         AppLog.log("SERVICE", "created")
+        markServiceAlive(true)
 
         // مشغّلات الصوت الإضافية (لو اتضافت لاحقاً) بتتحمل تلقائياً، وبنسمح بالرجوع لمفكك بديل عند الفشل
         val renderers = DefaultRenderersFactory(this)
@@ -144,16 +149,16 @@ class PlaybackService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        val keep = player != null &&
-            player.playWhenReady &&
-            player.mediaItemCount > 0 &&
-            player.playbackState != Player.STATE_ENDED
-        AppLog.log("SERVICE", "task removed, keep playing = $keep")
-        if (!keep) stopSelf()
+        val count = player?.mediaItemCount ?: 0
+        val playing = player != null && player.playWhenReady && player.playbackState != Player.STATE_ENDED
+        AppLog.log("SERVICE", "task removed (items=$count, playing=$playing)")
+        // بنقفل بس لو فيه إشعار واقف (متوقف مؤقتاً). لو لسه بنجهّز التشغيل أو شغّال نسيبه.
+        if (count > 0 && !playing) stopSelf()
     }
 
     override fun onDestroy() {
         AppLog.log("SERVICE", "destroyed")
+        markServiceAlive(false)
         AudioFx.release()
         mediaSession?.let {
             it.player.release()

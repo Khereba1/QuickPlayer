@@ -52,6 +52,11 @@ object AppLog {
             }
             previous?.uncaughtException(thread, error)
         }
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("svc_alive", false)) {
+            log("SYSTEM", "the previous process was killed by the system while playback service was alive (no clean shutdown)")
+            prefs.edit().putBoolean("svc_alive", false).commit()
+        }
         log("APP", "Started. Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL)
     }
 
