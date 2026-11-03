@@ -116,6 +116,7 @@ fun SeekBar(
     modifier: Modifier = Modifier,
     preview: (suspend (Long) -> Bitmap?)? = null,
     previewAspect: Float = 16f / 9f,
+    onDragChange: (Boolean) -> Unit = {},
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
@@ -125,12 +126,14 @@ fun SeekBar(
             Slider(
                 value = if (dragging) dragValue else frac,
                 onValueChange = {
+                    if (!dragging) onDragChange(true)
                     dragging = true
                     dragValue = it
                 },
                 onValueChangeFinished = {
                     onSeek((dragValue * duration).toLong())
                     dragging = false
+                    onDragChange(false)
                 },
                 enabled = duration > 0L,
                 modifier = Modifier.fillMaxWidth(),

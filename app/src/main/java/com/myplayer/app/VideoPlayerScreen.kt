@@ -82,6 +82,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     var showTracks by remember { mutableStateOf(false) }
     var showSpeed by remember { mutableStateOf(false) }
     var showSleep by remember { mutableStateOf(false) }
+    var scrubbing by remember { mutableStateOf(false) }
     val anyDialog = showTracks || showSpeed || showSleep
 
     // تراكم الضغطات المتتالية (يمين/شمال): بنعرض المجموع الفعلي اللي اتحركه الفيديو
@@ -160,8 +161,9 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         }
     }
 
-    LaunchedEffect(controlsVisible, vm.isPlaying, tick, locked, anyDialog) {
-        if (controlsVisible && vm.isPlaying && !anyDialog) {
+    // الأدوات ما بتختفيش طول ما إصبعك على شريط التقدم
+    LaunchedEffect(controlsVisible, vm.isPlaying, tick, locked, anyDialog, scrubbing) {
+        if (controlsVisible && vm.isPlaying && !anyDialog && !scrubbing) {
             delay(3500L)
             controlsVisible = false
         }
@@ -409,6 +411,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                         }
                                     },
                                     previewAspect = aspect,
+                                    onDragChange = { scrubbing = it },
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }
