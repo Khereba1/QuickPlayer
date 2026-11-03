@@ -184,6 +184,13 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var resizeMode by mutableIntStateOf(prefs.getInt("resize", 0))
         private set
+    var liveSeek by mutableStateOf(prefs.getBoolean("live_seek", true))
+        private set
+
+    fun updateLiveSeek(v: Boolean) {
+        liveSeek = v
+        prefs.edit().putBoolean("live_seek", v).apply()
+    }
 
     fun updateLanguage(v: String) {
         language = v

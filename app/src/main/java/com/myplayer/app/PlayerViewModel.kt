@@ -27,6 +27,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
@@ -598,6 +599,50 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         val target = ms.coerceAtLeast(0L)
         c.seekTo(target)
         positionMs = target
+    }
+
+    // ---------- السحب الحي (الفيديو بيتحدث وأنت بتسحب) ----------
+    private var scrubWasPlaying = false
+    private var lastScrubAt = 0L
+
+    private fun setFastSeek(fast: Boolean) {
+        val c = controller ?: return
+        try {
+            val args = android.os.Bundle()
+            args.putBoolean("fast", fast)
+            c.sendCustomCommand(SessionCommand(PlaybackService.SEEK_PARAMS_ACTION, android.os.Bundle.EMPTY), args)
+        } catch (e: Exception) {
+            AppLog.log("PLAY", "seek params command failed", e)
+        }
+    }
+
+    fun beginScrub() {
+        val c = controller ?: return
+        scrubWasPlaying = c.playWhenReady
+        if (scrubWasPlaying) c.pause()
+        setFastSeek(true)
+        lastScrubAt = 0L
+    }
+
+    fun scrubTo(ms: Long) {
+        val c = controller ?: return
+        val target = ms.coerceAtLeast(0L)
+        positionMs = target
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastScrubAt >= 90L) {
+            lastScrubAt = now
+            c.seekTo(target)
+        }
+    }
+
+    fun endScrub(ms: Long) {
+        val c = controller ?: return
+        setFastSeek(false)
+        val target = ms.coerceAtLeast(0L)
+        c.seekTo(target)
+        positionMs = target
+        if (scrubWasPlaying) c.play()
+        scrubWasPlaying = false
     }
 
     fun seekBy(deltaMs: Long) {

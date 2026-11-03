@@ -11,6 +11,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -30,6 +31,8 @@ class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private val closeCommand = SessionCommand(CLOSE_ACTION, Bundle.EMPTY)
+    private val seekParamsCommand = SessionCommand(SEEK_PARAMS_ACTION, Bundle.EMPTY)
+    private var exo: ExoPlayer? = null
 
     private val callback = object : MediaSession.Callback {
         override fun onConnect(
@@ -38,6 +41,7 @@ class PlaybackService : MediaSessionService() {
         ): MediaSession.ConnectionResult {
             val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                 .add(closeCommand)
+                .add(seekParamsCommand)
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(commands)
@@ -53,6 +57,12 @@ class PlaybackService : MediaSessionService() {
         ): ListenableFuture<SessionResult> {
             if (customCommand.customAction == CLOSE_ACTION) {
                 closePlayback("close button")
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            if (customCommand.customAction == SEEK_PARAMS_ACTION) {
+                // أثناء السحب على شريط التقدم: قفزات سريعة لأقرب إطار مفتاحي، وبعدها دقيق
+                val fast = args.getBoolean("fast", false)
+                exo?.setSeekParameters(if (fast) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             return super.onCustomCommand(session, controller, customCommand, args)
@@ -127,6 +137,7 @@ class PlaybackService : MediaSessionService() {
             }
         })
         AudioFx.attach(player.audioSessionId)
+        exo = player
 
         val openApp = PendingIntent.getActivity(
             this,
@@ -178,10 +189,12 @@ class PlaybackService : MediaSessionService() {
             it.release()
         }
         mediaSession = null
+        exo = null
         super.onDestroy()
     }
 
     companion object {
         const val CLOSE_ACTION = "com.khereba1.quickplayer.CLOSE"
+        const val SEEK_PARAMS_ACTION = "com.khereba1.quickplayer.SEEK_PARAMS"
     }
 }

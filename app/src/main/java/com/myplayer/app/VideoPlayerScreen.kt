@@ -104,6 +104,17 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     } else {
         16f / 9f
     }
+    val previewLambda: suspend (Long, Boolean) -> android.graphics.Bitmap? = { t, exact ->
+        val cur = vm.currentItem
+        if (cur == null) {
+            null
+        } else {
+            withContext(Dispatchers.IO) {
+                FramePreview.frame(ctx, cur, t, (previewH * aspect).roundToInt(), previewH, exact)
+            }
+        }
+    }
+    val scrubLambda: (Long) -> Unit = { ms -> vm.scrubTo(ms) }
 
     val audioManager = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     var brightness by remember {
@@ -255,10 +266,15 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                             startVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                         },
                         onDragEnd = {
-                            if (mode == 1) vm.seekTo(seekTarget)
+                            if (mode == 1) {
+                                if (vm.settings.liveSeek) vm.endScrub(seekTarget) else vm.seekTo(seekTarget)
+                            }
                             mode = 0
                         },
-                        onDragCancel = { mode = 0 },
+                        onDragCancel = {
+                            if (mode == 1 && vm.settings.liveSeek) vm.endScrub(startPos)
+                            mode = 0
+                        },
                         onDrag = { change, drag ->
                             change.consume()
                             accX += drag.x
@@ -271,11 +287,13 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 } else {
                                     3
                                 }
+                                if (mode == 1 && vm.settings.liveSeek) vm.beginScrub()
                             }
                             if (mode == 1) {
                                 val dur = vm.durationMs
                                 val delta = (accX / size.width * 120_000f).toLong()
                                 seekTarget = (startPos + delta).coerceIn(0L, if (dur > 0L) dur else Long.MAX_VALUE)
+                                if (vm.settings.liveSeek) vm.scrubTo(seekTarget)
                                 val sign = if (delta >= 0) "+" else "-"
                                 indicator = Indicator(
                                     null,
@@ -394,24 +412,19 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     vm.positionMs,
                                     vm.durationMs,
                                     onSeek = {
-                                        vm.seekTo(it)
+                                        if (vm.settings.liveSeek) vm.endScrub(it) else vm.seekTo(it)
                                         tick++
                                     },
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(horizontal = 8.dp),
-                                    preview = { t, exact ->
-                                        val cur = vm.currentItem
-                                        if (cur == null) {
-                                            null
-                                        } else {
-                                            withContext(Dispatchers.IO) {
-                                                FramePreview.frame(ctx, cur, t, (previewH * aspect).roundToInt(), previewH, exact)
-                                            }
-                                        }
-                                    },
+                                    preview = if (vm.settings.liveSeek) null else previewLambda,
                                     previewAspect = aspect,
-                                    onDragChange = { scrubbing = it },
+                                    onDragChange = {
+                                        scrubbing = it
+                                        if (it && vm.settings.liveSeek) vm.beginScrub()
+                                    },
+                                    onScrub = if (vm.settings.liveSeek) scrubLambda else null,
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }

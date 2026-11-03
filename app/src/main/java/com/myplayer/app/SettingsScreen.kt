@@ -146,6 +146,7 @@ fun SettingsScreen(vm: PlayerViewModel, onLanguageChanged: () -> Unit) {
         SectionTitle(stringResource(R.string.settings_playback))
         SwitchRow(stringResource(R.string.resume_title), stringResource(R.string.resume_desc), s.resume) { s.updateResume(it) }
         SwitchRow(stringResource(R.string.video_bg_title), stringResource(R.string.video_bg_desc), s.videoBackground) { s.updateVideoBackground(it) }
+        SwitchRow(stringResource(R.string.live_seek_title), stringResource(R.string.live_seek_desc), s.liveSeek) { s.updateLiveSeek(it) }
         SwitchRow(stringResource(R.string.auto_pip_title), stringResource(R.string.auto_pip_desc), s.autoPip) { s.updateAutoPip(it) }
 
         // ---- المكتبة ----

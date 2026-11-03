@@ -125,6 +125,8 @@
     <string name="resume_desc">Videos and long audio (over 10 minutes) continue from the last position.</string>
     <string name="video_bg_title">Keep playing video as audio</string>
     <string name="video_bg_desc">When you leave the video screen or the app, the sound keeps playing.</string>
+    <string name="live_seek_title">Live video while seeking</string>
+    <string name="live_seek_desc">The video itself updates while you drag the seek bar or swipe sideways. Turn off to see a small preview bubble instead.</string>
     <string name="auto_pip_title">Automatic picture in picture</string>
     <string name="auto_pip_desc">Shrink the video into a floating window when you press Home.</string>
 

@@ -117,6 +117,7 @@ fun SeekBar(
     preview: (suspend (Long, Boolean) -> Bitmap?)? = null,
     previewAspect: Float = 16f / 9f,
     onDragChange: (Boolean) -> Unit = {},
+    onScrub: ((Long) -> Unit)? = null,
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
@@ -129,6 +130,7 @@ fun SeekBar(
                     if (!dragging) onDragChange(true)
                     dragging = true
                     dragValue = it
+                    if (duration > 0L) onScrub?.invoke((it * duration).toLong())
                 },
                 onValueChangeFinished = {
                     onSeek((dragValue * duration).toLong())
