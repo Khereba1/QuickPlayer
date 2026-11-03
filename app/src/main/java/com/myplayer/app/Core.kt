@@ -7,7 +7,13 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.content.ContentValues
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
+import android.os.Environment
+import android.os.SystemClock
+import android.provider.MediaStore
+import androidx.media3.common.MediaItem
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -40,24 +46,68 @@ object AppLog {
     private val lock = Any()
     private const val MAX_BYTES = 200_000
 
+    private var appContext: Context? = null
+    private var startedAt = 0L
+
     fun init(context: Context) {
         if (file != null) return
+        appContext = context.applicationContext
+        startedAt = SystemClock.elapsedRealtime()
         file = File(context.filesDir, "app.log")
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
                 log("CRASH", "Uncaught exception in thread " + thread.name, error)
+                exportCrash(thread.name, error)
+                // لو الكراش حصل في أول ثواني من التشغيل: نعلّم عشان المرة الجاية نمسح البيانات المتغيرة
+                if (SystemClock.elapsedRealtime() - startedAt < 10_000L) {
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("boot_crash", true).commit()
+                }
             } catch (e: Throwable) {
                 // ignore
             }
             previous?.uncaughtException(thread, error)
         }
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("boot_crash", false)) {
+            val editor = prefs.edit()
+            for (k in prefs.all.keys) if (k.startsWith("pos_")) editor.remove(k)
+            editor.remove("recent")
+            editor.putBoolean("boot_crash", false)
+            editor.commit()
+            log("SYSTEM", "the previous launch crashed at startup: cleared resume positions and recent list")
+        }
         if (prefs.getBoolean("svc_alive", false)) {
             log("SYSTEM", "the previous process was killed by the system while playback service was alive (no clean shutdown)")
             prefs.edit().putBoolean("svc_alive", false).commit()
         }
         log("APP", "Started. Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL)
+    }
+
+    /** بيحفظ نسخة من الكراش في مجلد Download (QuickPlayer-crash.txt) عشان تقدر تبعتها حتى لو التطبيق مش بيفتح. */
+    private fun exportCrash(threadName: String, error: Throwable) {
+        val ctx = appContext ?: return
+        try {
+            val name = "QuickPlayer-crash.txt"
+            val resolver = ctx.contentResolver
+            try {
+                resolver.delete(MediaStore.Downloads.EXTERNAL_CONTENT_URI, MediaStore.Downloads.DISPLAY_NAME + "=?", arrayOf(name))
+            } catch (e: Throwable) {
+                // ignore
+            }
+            val values = ContentValues()
+            values.put(MediaStore.Downloads.DISPLAY_NAME, name)
+            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
+            val text = "QuickPlayer crash\n" +
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "\n" +
+                "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL + "\n" +
+                "Thread: " + threadName + "\n\n" + Log.getStackTraceString(error) + "\n\n----- recent log -----\n" + read().takeLast(6000)
+            resolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+        } catch (e: Throwable) {
+            // ignore
+        }
     }
 
     fun log(tag: String, message: String, error: Throwable? = null) {
@@ -244,5 +294,61 @@ object Thumbs {
         } catch (e: Throwable) {
             null
         }
+    }
+}
+
+/** لقطات مصغرة من الفيديو لمعاينة مكان السحب على شريط التقدم. */
+object FramePreview {
+    private val lock = Any()
+    private var key: String? = null
+    private var retriever: MediaMetadataRetriever? = null
+
+    fun frame(context: Context, item: MediaItem, timeMs: Long, w: Int, h: Int): Bitmap? {
+        return synchronized(lock) {
+            try {
+                if (item.mediaId != key) {
+                    releaseLocked()
+                    key = item.mediaId
+                    val uri = item.localConfiguration?.uri
+                    if (uri != null) {
+                        val r = MediaMetadataRetriever()
+                        try {
+                            if (uri.scheme == "fd") {
+                                val id = uri.pathSegments.firstOrNull()
+                                val pfd = if (id != null) FdRegistry.get(id) else null
+                                if (pfd != null) r.setDataSource(pfd.fileDescriptor) else throw IllegalStateException("no fd")
+                            } else {
+                                r.setDataSource(context, uri)
+                            }
+                            retriever = r
+                        } catch (e: Throwable) {
+                            try {
+                                r.release()
+                            } catch (e2: Throwable) {
+                                // ignore
+                            }
+                            retriever = null
+                        }
+                    }
+                }
+                retriever?.getScaledFrameAtTime(timeMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, w, h)
+            } catch (e: Throwable) {
+                null
+            }
+        }
+    }
+
+    fun release() {
+        synchronized(lock) { releaseLocked() }
+    }
+
+    private fun releaseLocked() {
+        try {
+            retriever?.release()
+        } catch (e: Throwable) {
+            // ignore
+        }
+        retriever = null
+        key = null
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -179,24 +180,49 @@ private fun MediaTab(vm: PlayerViewModel, video: Boolean) {
             ),
         )
 
+        // الصف الأول: زرين بنفس العرض (بيتحملوا النص العربي الطويل من غير تداخل)
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilledTonalButton(onClick = { vm.play(list, 0) }, enabled = list.isNotEmpty()) {
+            FilledTonalButton(
+                onClick = { vm.play(list, 0) },
+                enabled = list.isNotEmpty(),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            ) {
                 Ico(R.drawable.ic_play, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.play_all), maxLines = 1)
+                Text(stringResource(R.string.play_all), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            OutlinedButton(onClick = { vm.play(list, 0, shuffle = true) }, enabled = list.isNotEmpty()) {
+            OutlinedButton(
+                onClick = { vm.play(list, 0, shuffle = true) },
+                enabled = list.isNotEmpty(),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            ) {
                 Ico(R.drawable.ic_shuffle, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.shuffle), maxLines = 1)
+                Text(stringResource(R.string.shuffle), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+
+        // الصف التاني: الفلاتر على جنب، وأدوات الترتيب والفتح والتحديث على الجنب التاني
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            FilterChip(
+                selected = !favOnly,
+                onClick = { favOnly = false },
+                label = { Text(stringResource(R.string.filter_all) + " · " + list.size, maxLines = 1) },
+            )
+            FilterChip(selected = favOnly, onClick = { favOnly = true }, label = { Text(stringResource(R.string.filter_favorites), maxLines = 1) })
             Spacer(Modifier.weight(1f))
             Box {
-                IconButton(onClick = { sortMenu = true }) { Ico(R.drawable.ic_sort, stringResource(R.string.sort)) }
+                IconButton(onClick = { sortMenu = true }, modifier = Modifier.size(40.dp)) { Ico(R.drawable.ic_sort, stringResource(R.string.sort)) }
                 DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                     val options = listOf(R.string.sort_newest, R.string.sort_name, R.string.sort_duration)
                     for ((i, res) in options.withIndex()) {
@@ -210,25 +236,10 @@ private fun MediaTab(vm: PlayerViewModel, video: Boolean) {
                     }
                 }
             }
-            IconButton(onClick = { picker.launch(arrayOf("audio/*", "video/*", "application/ogg")) }) {
+            IconButton(onClick = { picker.launch(arrayOf("audio/*", "video/*", "application/ogg")) }, modifier = Modifier.size(40.dp)) {
                 Ico(R.drawable.ic_open, stringResource(R.string.open_files))
             }
-            IconButton(onClick = { vm.loadLibrary() }) { Ico(R.drawable.ic_refresh, stringResource(R.string.refresh)) }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(selected = !favOnly, onClick = { favOnly = false }, label = { Text(stringResource(R.string.filter_all)) })
-            FilterChip(selected = favOnly, onClick = { favOnly = true }, label = { Text(stringResource(R.string.filter_favorites)) })
-            Spacer(Modifier.weight(1f))
-            Text(
-                stringResource(R.string.items_count, list.size),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            IconButton(onClick = { vm.loadLibrary() }, modifier = Modifier.size(40.dp)) { Ico(R.drawable.ic_refresh, stringResource(R.string.refresh)) }
         }
 
         if (list.isEmpty()) {

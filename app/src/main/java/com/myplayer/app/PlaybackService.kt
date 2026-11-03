@@ -147,6 +147,19 @@ class PlaybackService : MediaSessionService() {
         return mediaSession
     }
 
+    /**
+     * بنمنع إعادة تشغيل الخدمة تلقائياً بعد ما النظام يقفلها (START_STICKY):
+     * الإعادة كانت بتطلع خدمة فاضية وممكن تسبب مشاكل عند فتح التطبيق بعدها.
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: Exception) {
+            AppLog.log("SERVICE", "onStartCommand failed", e)
+        }
+        return START_NOT_STICKY
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
         val count = player?.mediaItemCount ?: 0

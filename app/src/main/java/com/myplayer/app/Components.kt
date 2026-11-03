@@ -35,9 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import kotlin.math.max
+import kotlin.math.roundToInt
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -100,26 +104,85 @@ fun MediaThumb(
     }
 }
 
-/** شريط التقدم: دايماً من الشمال لليمين حتى في العربي، لأن الوقت بيمشي في اتجاه واحد. */
+/**
+ * شريط التقدم: دايماً من الشمال لليمين حتى في العربي، لأن الوقت بيمشي في اتجاه واحد.
+ * أثناء السحب بتظهر فقاعة فيها الوقت اللي هتوصله، ولو فيه [preview] بتظهر معاها لقطة مصغرة من الفيديو.
+ */
 @Composable
-fun SeekBar(position: Long, duration: Long, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
+fun SeekBar(
+    position: Long,
+    duration: Long,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+    preview: (suspend (Long) -> Bitmap?)? = null,
+    previewAspect: Float = 16f / 9f,
+) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
     val frac = if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Slider(
-            value = if (dragging) dragValue else frac,
-            onValueChange = {
-                dragging = true
-                dragValue = it
-            },
-            onValueChangeFinished = {
-                onSeek((dragValue * duration).toLong())
-                dragging = false
-            },
-            enabled = duration > 0L,
-            modifier = modifier,
-        )
+        Box(modifier = modifier) {
+            Slider(
+                value = if (dragging) dragValue else frac,
+                onValueChange = {
+                    dragging = true
+                    dragValue = it
+                },
+                onValueChangeFinished = {
+                    onSeek((dragValue * duration).toLong())
+                    dragging = false
+                },
+                enabled = duration > 0L,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (dragging && duration > 0L) {
+                val target = (dragValue * duration).toLong()
+                val bucket = target / 2000L
+                val frame by produceState<Bitmap?>(initialValue = null, bucket) {
+                    val fn = preview
+                    if (fn != null) {
+                        delay(120L)
+                        value = fn(bucket * 2000L)
+                    }
+                }
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xE6000000),
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .layout { measurable, constraints ->
+                            val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+                            val inset = 10.dp.roundToPx()
+                            val gap = 14.dp.roundToPx()
+                            val center = inset + (dragValue * (constraints.maxWidth - 2 * inset)).roundToInt()
+                            val x = (center - p.width / 2).coerceIn(0, max(0, constraints.maxWidth - p.width))
+                            layout(constraints.maxWidth, 0) { p.place(x, -p.height - gap) }
+                        },
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val b = frame
+                        if (preview != null && b != null) {
+                            Image(
+                                bitmap = b.asImageBitmap(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .width(150.dp)
+                                    .height((150f / previewAspect).dp)
+                                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                            )
+                        }
+                        Text(
+                            formatTime(target),
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

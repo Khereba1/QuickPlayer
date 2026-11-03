@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +58,9 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -79,6 +83,26 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     var showSpeed by remember { mutableStateOf(false) }
     var showSleep by remember { mutableStateOf(false) }
     val anyDialog = showTracks || showSpeed || showSleep
+
+    // تراكم الضغطات المتتالية (يمين/شمال): بنعرض المجموع الفعلي اللي اتحركه الفيديو
+    var seriesBase by remember { mutableLongStateOf(-1L) }
+    val skip: (Long) -> Unit = { delta ->
+        if (seriesBase < 0L) seriesBase = vm.positionMs
+        vm.seekBy(delta)
+        val moved = vm.positionMs - seriesBase
+        val sign = if (moved >= 0L) "+" else "-"
+        val secs = abs(moved) / 1000L
+        val text = if (secs < 60L) sign + secs + "s" else sign + formatTime(abs(moved))
+        indicator = Indicator(if (moved >= 0L) R.drawable.ic_forward else R.drawable.ic_rewind, text)
+    }
+
+    // معاينة الإطار أثناء سحب شريط التقدم
+    val previewH = 100
+    val aspect = if (vm.videoWidth > 0 && vm.videoHeight > 0) {
+        (vm.videoWidth.toFloat() / vm.videoHeight.toFloat()).coerceIn(0.6f, 2.4f)
+    } else {
+        16f / 9f
+    }
 
     val audioManager = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     var brightness by remember {
@@ -121,6 +145,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            FramePreview.release()
         }
     }
 
@@ -146,6 +171,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         if (indicator != null) {
             delay(900L)
             indicator = null
+            seriesBase = -1L
         }
     }
 
@@ -195,11 +221,9 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                             if (!locked) {
                                 val w = size.width
                                 if (offset.x < w * 0.33f) {
-                                    vm.seekBy(-10_000L)
-                                    indicator = Indicator(R.drawable.ic_rewind, "-10s")
+                                    skip(-10_000L)
                                 } else if (offset.x > w * 0.67f) {
-                                    vm.seekBy(10_000L)
-                                    indicator = Indicator(R.drawable.ic_forward, "+10s")
+                                    skip(10_000L)
                                 } else {
                                     vm.togglePlay()
                                 }
@@ -374,68 +398,81 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(horizontal = 8.dp),
+                                    preview = { t ->
+                                        val cur = vm.currentItem
+                                        if (cur == null) {
+                                            null
+                                        } else {
+                                            withContext(Dispatchers.IO) {
+                                                FramePreview.frame(ctx, cur, t, (previewH * aspect).roundToInt(), previewH)
+                                            }
+                                        }
+                                    },
+                                    previewAspect = aspect,
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }
+                            // الصف الأول: القفل والسرعة على الشمال، والأدوات على اليمين (بيتسع في الطولي والعرضي)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = {
-                                        locked = true
-                                        controlsVisible = false
-                                    }) { Ico(R.drawable.ic_lock_open, stringResource(R.string.lock)) }
-                                    TextButton(onClick = { showSpeed = true }) {
-                                        Text(speedLabel(vm.speed), color = Color.White)
-                                    }
+                                IconButton(onClick = {
+                                    locked = true
+                                    controlsVisible = false
+                                }) { Ico(R.drawable.ic_lock_open, stringResource(R.string.lock)) }
+                                TextButton(onClick = { showSpeed = true }) {
+                                    Text(speedLabel(vm.speed), color = Color.White)
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = {
-                                        vm.seekBy(-10_000L)
-                                        tick++
-                                    }) { Ico(R.drawable.ic_rewind, stringResource(R.string.seek_back)) }
-                                    IconButton(onClick = { vm.previous() }) {
-                                        Ico(R.drawable.ic_prev, stringResource(R.string.previous))
+                                Spacer(Modifier.weight(1f))
+                                IconButton(onClick = {
+                                    vm.settings.updateResizeMode((vm.settings.resizeMode + 1) % 3)
+                                    val label = when (vm.settings.resizeMode) {
+                                        1 -> R.string.aspect_fill
+                                        2 -> R.string.aspect_zoom
+                                        else -> R.string.aspect_fit
                                     }
-                                    BigPlayButton(playing = vm.isPlaying, size = 60.dp, onClick = {
-                                        vm.togglePlay()
-                                        tick++
-                                    })
-                                    IconButton(onClick = { vm.next() }) {
-                                        Ico(R.drawable.ic_next, stringResource(R.string.next))
-                                    }
-                                    IconButton(onClick = {
-                                        vm.seekBy(10_000L)
-                                        tick++
-                                    }) { Ico(R.drawable.ic_forward, stringResource(R.string.seek_forward)) }
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = {
-                                        vm.settings.updateResizeMode((vm.settings.resizeMode + 1) % 3)
-                                        val label = when (vm.settings.resizeMode) {
-                                            1 -> R.string.aspect_fill
-                                            2 -> R.string.aspect_zoom
-                                            else -> R.string.aspect_fit
+                                    indicator = Indicator(R.drawable.ic_aspect, ctx.getString(label))
+                                }) { Ico(R.drawable.ic_aspect, stringResource(R.string.aspect)) }
+                                IconButton(onClick = {
+                                    val a = activity
+                                    if (a != null) {
+                                        val landscape = a.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                        a.requestedOrientation = if (landscape) {
+                                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                                        } else {
+                                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                                         }
-                                        indicator = Indicator(R.drawable.ic_aspect, ctx.getString(label))
-                                    }) { Ico(R.drawable.ic_aspect, stringResource(R.string.aspect)) }
-                                    IconButton(onClick = {
-                                        val a = activity
-                                        if (a != null) {
-                                            val landscape = a.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                            a.requestedOrientation = if (landscape) {
-                                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-                                            } else {
-                                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                            }
-                                        }
-                                    }) { Ico(R.drawable.ic_rotate, stringResource(R.string.rotate)) }
-                                    IconButton(onClick = { showSleep = true }) {
-                                        Ico(R.drawable.ic_timer, stringResource(R.string.sleep_title))
                                     }
+                                }) { Ico(R.drawable.ic_rotate, stringResource(R.string.rotate)) }
+                                IconButton(onClick = { showSleep = true }) {
+                                    Ico(R.drawable.ic_timer, stringResource(R.string.sleep_title))
                                 }
+                            }
+                            // الصف التاني: أزرار التشغيل في النص
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                IconButton(onClick = {
+                                    skip(-10_000L)
+                                    tick++
+                                }) { Ico(R.drawable.ic_rewind, stringResource(R.string.seek_back)) }
+                                IconButton(onClick = { vm.previous() }) {
+                                    Ico(R.drawable.ic_prev, stringResource(R.string.previous))
+                                }
+                                BigPlayButton(playing = vm.isPlaying, size = 60.dp, onClick = {
+                                    vm.togglePlay()
+                                    tick++
+                                })
+                                IconButton(onClick = { vm.next() }) {
+                                    Ico(R.drawable.ic_next, stringResource(R.string.next))
+                                }
+                                IconButton(onClick = {
+                                    skip(10_000L)
+                                    tick++
+                                }) { Ico(R.drawable.ic_forward, stringResource(R.string.seek_forward)) }
                             }
                         }
                     }
