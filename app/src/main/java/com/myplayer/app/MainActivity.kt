@@ -83,9 +83,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         hasPermission = mediaPermissionGranted()
 
+        // مهم: بنعمل الـ ViewModel هنا في البداية (برا أي snapshot). لو اتعمل لأول مرة جوه snapshotFlow
+        // بيحصل كراش "Cannot modify a state object in a read-only snapshot" لو فيه بيانات محفوظة.
+        val model = vm
+
         setContent {
             PlayerApp(
-                vm = vm,
+                vm = model,
                 hasPermission = hasPermission,
                 onRequestPermission = { requestPermissionsOrOpenSettings() },
                 onEnterPip = { enterPip() },
@@ -95,7 +99,7 @@ class MainActivity : ComponentActivity() {
 
         // تحديث زر التشغيل/الإيقاف في النافذة العائمة
         lifecycleScope.launch {
-            snapshotFlow { vm.isPlaying }.collect {
+            snapshotFlow { model.isPlaying }.collect {
                 if (vm.inPip) {
                     try {
                         setPictureInPictureParams(buildPipParams())
