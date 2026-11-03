@@ -42,3 +42,15 @@ without keys, env files, build output or APKs, and refuses if it finds anything 
 Never ask the owner for the keystore, its password, or GitHub secrets.
 ## Known behaviour (v2.1)
 Crash on startup is exported to Download/QuickPlayer-crash.txt; ask the owner for that file if the app will not open.
+
+## REQUIRED answer format (the owner has only a phone + Termux)
+1. Briefly say what you changed and why (plain language; the owner writes Egyptian Arabic mixed with English terms, reply in the same).
+2. Deliver ONE zip containing only the changed/new files, complete (never snippets or diffs), with paths relative to the project root
+   (e.g. `app/src/main/java/com/myplayer/app/Core.kt`). Name it `fixN.zip` (fix8, fix9, ...). If you cannot create a zip, give each
+   file in full in its own code block with its path, and say so clearly.
+3. Raise `versionCode` (+1) and `versionName` in `app/build.gradle.kts` for every functional change, and include that file.
+4. Give the install command, ready to copy, with the real folder name:
+   `cd ~/quickplayer && unzip -o ~/storage/downloads/fixN.zip -d . && git add . && git commit -m "short message" && git push`
+   (Termux project folder: ~/quickplayer, GitHub repo: Khereba1/QuickPlayer, APK: github.com/Khereba1/QuickPlayer/releases/tag/latest)
+5. Say honestly that nothing was compiled or tested, and what to check first on the phone.
+6. If the build fails, the owner sends lines containing `e: ` from the Actions log; fix only those.

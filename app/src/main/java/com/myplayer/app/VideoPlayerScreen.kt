@@ -98,7 +98,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     }
 
     // معاينة الإطار أثناء سحب شريط التقدم
-    val previewH = 100
+    val previewH = 240
     val aspect = if (vm.videoWidth > 0 && vm.videoHeight > 0) {
         (vm.videoWidth.toFloat() / vm.videoHeight.toFloat()).coerceIn(0.6f, 2.4f)
     } else {
