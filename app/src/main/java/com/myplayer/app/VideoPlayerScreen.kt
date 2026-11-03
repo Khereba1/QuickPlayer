@@ -149,6 +149,8 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         }
     }
 
+    LaunchedEffect(item?.mediaId) { vm.setVideoEnabled(true) }
+
     BackHandler(enabled = locked && !pip) { locked = false }
 
     val resize = when (vm.settings.resizeMode) {
@@ -343,6 +345,9 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                             )
                             IconButton(onClick = { showTracks = true }) {
                                 Ico(R.drawable.ic_subtitles, stringResource(R.string.tracks_title))
+                            }
+                            IconButton(onClick = { vm.switchToAudioOnly(false) }) {
+                                Ico(R.drawable.ic_headphones, stringResource(R.string.audio_only))
                             }
                             IconButton(onClick = onEnterPip) {
                                 Ico(R.drawable.ic_pip, stringResource(R.string.pip))

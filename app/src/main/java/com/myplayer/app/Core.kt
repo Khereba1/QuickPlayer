@@ -113,7 +113,7 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var themeMode by mutableIntStateOf(prefs.getInt("theme", 0))
         private set
-    var accent by mutableIntStateOf(prefs.getInt("accent", 0))
+    var accent by mutableIntStateOf(prefs.getInt("accent", 1))
         private set
     var amoled by mutableStateOf(prefs.getBoolean("amoled", false))
         private set

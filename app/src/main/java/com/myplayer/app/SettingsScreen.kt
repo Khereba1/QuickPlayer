@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,11 +114,12 @@ fun SettingsScreen(vm: PlayerViewModel, onLanguageChanged: () -> Unit) {
         ) {
             for (i in Accents.indices) {
                 val selected = s.accent == i
+                val swatch = swatchColor(i)
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(accentPreview(i))
+                        .background(swatch)
                         .then(
                             if (selected) {
                                 Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
@@ -128,6 +134,12 @@ fun SettingsScreen(vm: PlayerViewModel, onLanguageChanged: () -> Unit) {
                 }
             }
         }
+        Text(
+            stringResource(Accents[s.accent.coerceIn(0, Accents.lastIndex)].nameRes),
+            modifier = Modifier.padding(horizontal = 20.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         SwitchRow(stringResource(R.string.amoled), stringResource(R.string.amoled_desc), s.amoled) { s.updateAmoled(it) }
 
         // ---- التشغيل ----
@@ -301,4 +313,15 @@ private fun ClickRow(title: String, desc: String?, onClick: () -> Unit) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         if (desc != null) Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+/** لون الدائرة: للخيار الأول ("لون الخلفية") بنعرض اللون الحقيقي المأخوذ من خلفية الموبايل. */
+@Composable
+private fun swatchColor(index: Int): Color {
+    val ctx = LocalContext.current
+    if (index == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        return if (dark) dynamicDarkColorScheme(ctx).primary else dynamicLightColorScheme(ctx).primary
+    }
+    return accentPreview(index)
 }

@@ -150,4 +150,6 @@
     <string name="msg_subtitle_failed">Could not add the subtitle file.</string>
     <string name="msg_pip_unsupported">Picture in picture is not supported on this device.</string>
     <string name="ok">OK</string>
+    <string name="audio_only">Audio only</string>
+    <string name="notif_close">Close</string>
 </resources>

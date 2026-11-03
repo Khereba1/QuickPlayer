@@ -767,15 +767,41 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onAppForegrounded() {
         val c = controller ?: return
-        if (c.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
+        if (!audioOnlyMode && c.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO)) {
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
                 .build()
         }
     }
 
+    private var audioOnlyFromPip = false
+    private var audioOnlyMode = false
+
+    /** بيحوّل الفيديو لصوت فقط: بيقفل الصورة ويكمّل الصوت في الخلفية. */
+    fun switchToAudioOnly(fromPip: Boolean) {
+        audioOnlyFromPip = fromPip
+        audioOnlyMode = true
+        setVideoEnabled(false)
+        showPlayer = false
+    }
+
+    fun setVideoEnabled(enabled: Boolean) {
+        val c = controller ?: return
+        if (enabled) audioOnlyMode = false
+        val params = c.trackSelectionParameters
+        if (params.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO) == enabled) {
+            c.trackSelectionParameters = params.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, !enabled)
+                .build()
+        }
+    }
+
     fun onPipClosed() {
         inPip = false
+        if (audioOnlyFromPip) {
+            audioOnlyFromPip = false
+            return
+        }
         val c = controller ?: return
         if (c.currentMediaItem?.isVideoItem() == true) c.pause()
         showPlayer = false

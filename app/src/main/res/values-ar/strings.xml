@@ -148,4 +148,6 @@
     <string name="msg_subtitle_failed">معرفتش أضيف ملف الترجمة.</string>
     <string name="msg_pip_unsupported">النافذة العائمة غير مدعومة على الجهاز ده.</string>
     <string name="ok">تمام</string>
+    <string name="audio_only">صوت فقط</string>
+    <string name="notif_close">إغلاق</string>
 </resources>
