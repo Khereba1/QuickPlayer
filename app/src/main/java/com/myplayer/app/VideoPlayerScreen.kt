@@ -14,7 +14,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +87,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     var showSpeed by remember { mutableStateOf(false) }
     var showSleep by remember { mutableStateOf(false) }
     var scrubbing by remember { mutableStateOf(false) }
+    var hintVisible by remember { mutableStateOf(false) }
     val anyDialog = showTracks || showSpeed || showSleep
 
     // تراكم الضغطات المتتالية (يمين/شمال): بنعرض المجموع الفعلي اللي اتحركه الفيديو
@@ -191,6 +195,17 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
 
     LaunchedEffect(item?.mediaId) { vm.setVideoEnabled(true) }
 
+    // تلميح الوضع النظيف: مرة واحدة بس، أول ما يتفتح فيديو والوضع مفعّل
+    LaunchedEffect(vm.settings.cleanPlayer, item?.mediaId) {
+        if (vm.settings.cleanPlayer && !vm.settings.cleanHintSeen && item != null) {
+            delay(700)
+            hintVisible = true
+            vm.settings.markCleanHintSeen()
+            delay(7000)
+            hintVisible = false
+        }
+    }
+
     BackHandler(enabled = locked && !pip) { locked = false }
 
     val resize = when (vm.settings.resizeMode) {
@@ -224,6 +239,42 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .pointerInput(locked, pip, vm.settings.cleanPlayer) {
+                    // الوضع النظيف: سحب بصباعين يمين/شمال = التالي/السابق
+                    if (pip || locked || !vm.settings.cleanPlayer) return@pointerInput
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        var multi = false
+                        var done = false
+                        var startX = 0f
+                        while (true) {
+                            val ev = awaitPointerEvent(PointerEventPass.Initial)
+                            val down = ev.changes.filter { it.pressed }
+                            if (down.isEmpty()) break
+                            if (down.size >= 2) multi = true
+                            if (multi) {
+                                val avg = down.map { it.position.x }.average().toFloat()
+                                if (down.size >= 2 && startX == 0f) startX = avg
+                                ev.changes.forEach { it.consume() }
+                                if (!done && down.size >= 2 && abs(avg - startX) > size.width * 0.14f) {
+                                    done = true
+                                    hintVisible = false
+                                    val toNext = avg < startX
+                                    val ok = if (toNext) vm.swipeNext() else vm.swipePrevious()
+                                    val msg = if (ok) {
+                                        if (toNext) R.string.clean_next else R.string.clean_prev
+                                    } else {
+                                        if (toNext) R.string.clean_no_next else R.string.clean_no_prev
+                                    }
+                                    indicator = Indicator(
+                                        if (ok) (if (toNext) R.drawable.ic_next else R.drawable.ic_prev) else null,
+                                        ctx.getString(msg),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 .pointerInput(locked, pip) {
                     if (pip) return@pointerInput
                     detectTapGestures(
@@ -342,6 +393,12 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                         }
                     }
                 }
+
+                CleanHint(
+                    visible = hintVisible && !pip,
+                    onDismiss = { hintVisible = false },
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp),
+                )
 
                 // وضع القفل: زر فتح القفل بس
                 AnimatedVisibility(

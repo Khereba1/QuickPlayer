@@ -584,6 +584,21 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         controller?.seekToNextMediaItem()
     }
 
+    /** للتنقل بالإيماءة: بيرجع true لو فعلاً اتنقل لفيديو تاني. */
+    fun swipeNext(): Boolean {
+        val c = controller ?: return false
+        if (!c.hasNextMediaItem()) return false
+        c.seekToNextMediaItem()
+        return true
+    }
+
+    fun swipePrevious(): Boolean {
+        val c = controller ?: return false
+        if (!c.hasPreviousMediaItem()) return false
+        c.seekToPreviousMediaItem()
+        return true
+    }
+
     fun previous() {
         val c = controller ?: return
         if (c.currentPosition > 3000L || !c.hasPreviousMediaItem()) {

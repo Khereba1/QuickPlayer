@@ -126,7 +126,15 @@
     <string name="video_bg_title">Keep playing video as audio</string>
     <string name="video_bg_desc">When you leave the video screen or the app, the sound keeps playing.</string>
     <string name="clean_player_title">Clean player mode</string>
-    <string name="clean_player_desc">Video screen with a thin white seek bar and no big playback buttons. Use gestures: swipe to seek, change brightness and volume, double-tap the sides for 10 seconds, double-tap the middle to play or pause.</string>
+    <string name="clean_player_desc">Video screen with a thin white seek bar and no big playback buttons. Video only. Use gestures: swipe to seek, change brightness and volume, double-tap the sides for 10 seconds, double-tap the middle to play or pause, swipe with two fingers to switch videos.</string>
+    <string name="clean_next">Next video</string>
+    <string name="clean_prev">Previous video</string>
+    <string name="clean_no_next">This is the last video</string>
+    <string name="clean_no_prev">This is the first video</string>
+    <string name="clean_hint_title">Clean mode is on</string>
+    <string name="clean_hint_swipe">Swipe with two fingers to switch videos</string>
+    <string name="clean_hint_tap">Double-tap the middle to play or pause</string>
+    <string name="clean_hint_ok">Got it</string>
     <string name="pause_call_title">Pause during calls</string>
     <string name="pause_call_desc">Stops playback while the phone rings or during a call so you can hear it, then resumes when the call ends.</string>
     <string name="live_seek_title">Live video while seeking</string>

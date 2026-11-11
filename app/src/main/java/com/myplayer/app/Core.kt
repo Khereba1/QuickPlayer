@@ -194,6 +194,14 @@ class AppSettings(private val prefs: SharedPreferences) {
         prefs.edit().putBoolean("clean_player", v).apply()
     }
 
+    var cleanHintSeen by mutableStateOf(prefs.getBoolean("clean_hint_seen", false))
+        private set
+
+    fun markCleanHintSeen() {
+        cleanHintSeen = true
+        prefs.edit().putBoolean("clean_hint_seen", true).apply()
+    }
+
     var pauseOnCall by mutableStateOf(prefs.getBoolean("pause_on_call", true))
         private set
 

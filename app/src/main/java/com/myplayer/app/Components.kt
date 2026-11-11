@@ -37,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -363,6 +365,64 @@ private fun ThinSlider(
                     .clip(CircleShape)
                     .background(Color.White),
             )
+        }
+    }
+}
+
+/** تلميح بسيط وبحركة، بيظهر مرة واحدة أول ما يتفتح فيديو والوضع النظيف مفعّل. */
+@Composable
+fun CleanHint(visible: Boolean, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it / 2 },
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it / 2 },
+    ) {
+        val accent = MaterialTheme.colorScheme.primary
+        Surface(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xE6111111),
+            contentColor = Color.White,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "hint")
+                val p by t.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                        animation = androidx.compose.animation.core.tween(1400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
+                    ),
+                    label = "hintp",
+                )
+                androidx.compose.foundation.Canvas(modifier = Modifier.width(150.dp).height(44.dp)) {
+                    val cy = size.height / 2f
+                    val r = 11.dp.toPx()
+                    val track = size.width - 2 * r - 22.dp.toPx()
+                    val x = r + 11.dp.toPx() + track * p
+                    drawLine(
+                        color = Color(0x33FFFFFF),
+                        start = androidx.compose.ui.geometry.Offset(r, cy),
+                        end = androidx.compose.ui.geometry.Offset(size.width - r, cy),
+                        strokeWidth = 2.dp.toPx(),
+                    )
+                    drawCircle(color = accent.copy(alpha = 0.35f), radius = r * 1.7f, center = androidx.compose.ui.geometry.Offset(x, cy))
+                    drawCircle(color = accent, radius = r, center = androidx.compose.ui.geometry.Offset(x, cy - 7.dp.toPx()))
+                    drawCircle(color = Color.White, radius = r, center = androidx.compose.ui.geometry.Offset(x + 12.dp.toPx(), cy + 7.dp.toPx()))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.clean_hint_title), style = MaterialTheme.typography.titleSmall, color = accent)
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.clean_hint_swipe), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.clean_hint_tap), style = MaterialTheme.typography.bodySmall, color = Color(0xB3FFFFFF))
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.clean_hint_ok))
+                }
+            }
         }
     }
 }
