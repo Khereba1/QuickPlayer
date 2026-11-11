@@ -621,13 +621,35 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     private var lastScrubAt = 0L
     private var scrubTarget = 0L
     private var scrubExact = false
+    private var lastSentTarget = -1L
+
+    // بنبعت طلب seek جديد بس لما اللي قبله يخلص (أو يعدي وقت كفاية)، ودايماً بآخر مكان وقفت عنده
+    private val trailing = Runnable { trySendScrub() }
+
+    private fun trySendScrub() {
+        val c = controller ?: return
+        if (scrubTarget == lastSentTarget) return
+        val now = android.os.SystemClock.uptimeMillis()
+        val gap = now - lastScrubAt
+        if (gap >= 40L && (c.playbackState != Player.STATE_BUFFERING || gap >= 350L)) {
+            lastScrubAt = now
+            lastSentTarget = scrubTarget
+            c.seekTo(scrubTarget)
+        } else {
+            handler.removeCallbacks(trailing)
+            handler.postDelayed(trailing, 25L)
+        }
+    }
 
     // لما إصبعك يقف لحظة: قفزة دقيقة للإطار الصح بالظبط
     private val exactSeek = Runnable {
         val c = controller
         if (c != null) {
+            handler.removeCallbacks(trailing)
             setFastSeek(false)
             scrubExact = true
+            lastSentTarget = scrubTarget
+            lastScrubAt = android.os.SystemClock.uptimeMillis()
             c.seekTo(scrubTarget)
         }
     }
@@ -650,6 +672,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         setFastSeek(true)
         scrubExact = false
         lastScrubAt = 0L
+        lastSentTarget = -1L
     }
 
     fun scrubTo(ms: Long) {
@@ -661,18 +684,16 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             setFastSeek(true)
             scrubExact = false
         }
-        val now = android.os.SystemClock.uptimeMillis()
-        if (now - lastScrubAt >= 100L) {
-            lastScrubAt = now
-            c.seekTo(target)
-        }
+        handler.removeCallbacks(trailing)
+        trySendScrub()
         handler.removeCallbacks(exactSeek)
-        handler.postDelayed(exactSeek, 220L)
+        handler.postDelayed(exactSeek, 180L)
     }
 
     fun endScrub(ms: Long) {
         val c = controller ?: return
         handler.removeCallbacks(exactSeek)
+        handler.removeCallbacks(trailing)
         scrubExact = false
         setFastSeek(false)
         val target = ms.coerceAtLeast(0L)
