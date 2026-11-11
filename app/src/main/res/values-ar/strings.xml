@@ -123,6 +123,8 @@
     <string name="resume_desc">الفيديو والصوت الطويل (أكتر من 10 دقايق) يكمل من آخر نقطة وقفت عندها.</string>
     <string name="video_bg_title">تشغيل الفيديو كصوت في الخلفية</string>
     <string name="video_bg_desc">لما تخرج من شاشة الفيديو أو من التطبيق، الصوت يكمل.</string>
+    <string name="pause_call_title">إيقاف التشغيل وقت المكالمات</string>
+    <string name="pause_call_desc">يوقف الصوت لما التليفون يرن أو أثناء المكالمة عشان تسمع الرنة، ويكمّل بعد ما المكالمة تخلص.</string>
     <string name="live_seek_title">تحديث الفيديو أثناء التقديم</string>
     <string name="live_seek_desc">الفيديو نفسه بيتغير وأنت بتسحب شريط التقدم أو بتسحب بإصبعك يميناً وشمالاً. لو قفلته هتشوف فقاعة صغيرة فيها لقطة معاينة.</string>
     <string name="auto_pip_title">النافذة العائمة تلقائياً</string>

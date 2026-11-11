@@ -2,6 +2,9 @@ package com.myplayer.app
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -33,6 +36,42 @@ class PlaybackService : MediaSessionService() {
     private val closeCommand = SessionCommand(CLOSE_ACTION, Bundle.EMPTY)
     private val seekParamsCommand = SessionCommand(SEEK_PARAMS_ACTION, Bundle.EMPTY)
     private var exo: ExoPlayer? = null
+
+    // ---- إيقاف التشغيل وقت المكالمات عشان الرنة تتسمع ----
+    private val handler = Handler(Looper.getMainLooper())
+    private var pausedByCall = false
+    private var overrideCall = false
+    private val callPoll = object : Runnable {
+        override fun run() {
+            val p = exo ?: return
+            val am = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
+            val mode = am?.mode ?: AudioManager.MODE_NORMAL
+            val inCall = mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_IN_CALL ||
+                mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_CALL_SCREENING
+            val enabled = getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean("pause_on_call", true)
+            if (inCall) {
+                if (pausedByCall && p.playWhenReady) {
+                    // أنت شغّلته بإيدك وقت المكالمة: نسيبه
+                    pausedByCall = false
+                    overrideCall = true
+                } else if (!overrideCall && enabled && p.isPlaying) {
+                    pausedByCall = true
+                    p.pause()
+                    AppLog.log("AUDIO", "paused because the phone is ringing or in a call (audio mode $mode)")
+                }
+            } else {
+                overrideCall = false
+                if (pausedByCall) {
+                    pausedByCall = false
+                    if (!p.playWhenReady) {
+                        AppLog.log("AUDIO", "call ended: resuming")
+                        p.play()
+                    }
+                }
+            }
+            if (p.isPlaying || pausedByCall) handler.postDelayed(this, 700L)
+        }
+    }
 
     private val callback = object : MediaSession.Callback {
         override fun onConnect(
@@ -126,6 +165,25 @@ class PlaybackService : MediaSessionService() {
                 AudioFx.attach(audioSessionId)
             }
 
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    handler.removeCallbacks(callPoll)
+                    handler.post(callPoll)
+                }
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
+                    AppLog.log("AUDIO", "paused by audio focus loss (another app or a call took the audio)")
+                }
+            }
+
+            override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    AppLog.log("AUDIO", "playback suppressed, reason=" + playbackSuppressionReason)
+                }
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 // ملف جاي من برا التطبيق وخلص: نشيل الإشعار تماماً
                 if (playbackState == Player.STATE_ENDED) {
@@ -188,6 +246,7 @@ class PlaybackService : MediaSessionService() {
             it.player.release()
             it.release()
         }
+        handler.removeCallbacksAndMessages(null)
         mediaSession = null
         exo = null
         super.onDestroy()

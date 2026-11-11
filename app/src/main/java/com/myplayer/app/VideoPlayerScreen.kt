@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -428,11 +429,9 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }
-                            // الصف الأول: القفل والسرعة على الشمال، والأدوات على اليمين (بيتسع في الطولي والعرضي)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            // مجموعات الأزرار: في الطولي صفين، وفي العرضي صف واحد عشان الفيديو ياخد مساحة أكبر
+                            val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+                            val leftTools: @Composable () -> Unit = {
                                 IconButton(onClick = {
                                     locked = true
                                     controlsVisible = false
@@ -440,7 +439,8 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 TextButton(onClick = { showSpeed = true }) {
                                     Text(speedLabel(vm.speed), color = Color.White)
                                 }
-                                Spacer(Modifier.weight(1f))
+                            }
+                            val rightTools: @Composable () -> Unit = {
                                 IconButton(onClick = {
                                     vm.settings.updateResizeMode((vm.settings.resizeMode + 1) % 3)
                                     val label = when (vm.settings.resizeMode) {
@@ -453,8 +453,8 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 IconButton(onClick = {
                                     val a = activity
                                     if (a != null) {
-                                        val landscape = a.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                        a.requestedOrientation = if (landscape) {
+                                        val isLandscape = a.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                        a.requestedOrientation = if (isLandscape) {
                                             ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
                                         } else {
                                             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -465,12 +465,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     Ico(R.drawable.ic_timer, stringResource(R.string.sleep_title))
                                 }
                             }
-                            // الصف التاني: أزرار التشغيل في النص
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            val transport: @Composable () -> Unit = {
                                 IconButton(onClick = {
                                     skip(-10_000L)
                                     tick++
@@ -489,6 +484,34 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     skip(10_000L)
                                     tick++
                                 }) { Ico(R.drawable.ic_forward, stringResource(R.string.seek_forward)) }
+                            }
+                            if (landscape) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    leftTools()
+                                    Spacer(Modifier.weight(1f))
+                                    transport()
+                                    Spacer(Modifier.weight(1f))
+                                    rightTools()
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    leftTools()
+                                    Spacer(Modifier.weight(1f))
+                                    rightTools()
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    transport()
+                                }
                             }
                         }
                     }

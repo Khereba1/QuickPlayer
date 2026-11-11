@@ -186,6 +186,13 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var liveSeek by mutableStateOf(prefs.getBoolean("live_seek", true))
         private set
+    var pauseOnCall by mutableStateOf(prefs.getBoolean("pause_on_call", true))
+        private set
+
+    fun updatePauseOnCall(v: Boolean) {
+        pauseOnCall = v
+        prefs.edit().putBoolean("pause_on_call", v).apply()
+    }
 
     fun updateLiveSeek(v: Boolean) {
         liveSeek = v
