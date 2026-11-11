@@ -13,8 +13,8 @@ android {
         applicationId = "com.khereba1.quickplayer"
         minSdk = 29
         targetSdk = 34
-        versionCode = 10
-        versionName = "2.8"
+        versionCode = 11
+        versionName = "2.9"
     }
 
     // توقيع ثابت: لو متغيرات البيئة موجودة (من GitHub Secrets) بنوقّع بالمفتاح الثابت،

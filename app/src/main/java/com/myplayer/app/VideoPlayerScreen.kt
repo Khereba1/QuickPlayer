@@ -399,6 +399,16 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                             }
                         }
 
+                        // الوضع النظيف: زرار تشغيل/إيقاف صغير في نص الشاشة
+                        if (vm.settings.cleanPlayer) {
+                            Box(modifier = Modifier.align(Alignment.Center)) {
+                                BigPlayButton(playing = vm.isPlaying, size = 56.dp, onClick = {
+                                    vm.togglePlay()
+                                    tick++
+                                })
+                            }
+                        }
+
                         // الشريط السفلي
                         Column(
                             modifier = Modifier
@@ -426,6 +436,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                         if (it && vm.settings.liveSeek) vm.beginScrub()
                                     },
                                     onScrub = if (vm.settings.liveSeek) scrubLambda else null,
+                                    clean = vm.settings.cleanPlayer,
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }
@@ -485,7 +496,17 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     tick++
                                 }) { Ico(R.drawable.ic_forward, stringResource(R.string.seek_forward)) }
                             }
-                            if (landscape) {
+                            if (vm.settings.cleanPlayer) {
+                                // الوضع النظيف: الأدوات الصغيرة بس، والتشغيل بالإيماءات وزرار صغير في النص
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    leftTools()
+                                    Spacer(Modifier.weight(1f))
+                                    rightTools()
+                                }
+                            } else if (landscape) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,

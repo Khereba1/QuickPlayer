@@ -186,6 +186,14 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var liveSeek by mutableStateOf(prefs.getBoolean("live_seek", true))
         private set
+    var cleanPlayer by mutableStateOf(prefs.getBoolean("clean_player", false))
+        private set
+
+    fun updateCleanPlayer(v: Boolean) {
+        cleanPlayer = v
+        prefs.edit().putBoolean("clean_player", v).apply()
+    }
+
     var pauseOnCall by mutableStateOf(prefs.getBoolean("pause_on_call", true))
         private set
 

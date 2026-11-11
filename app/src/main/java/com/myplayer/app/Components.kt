@@ -4,6 +4,12 @@ import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -118,28 +124,41 @@ fun SeekBar(
     previewAspect: Float = 16f / 9f,
     onDragChange: (Boolean) -> Unit = {},
     onScrub: ((Long) -> Unit)? = null,
+    clean: Boolean = false,
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
     val frac = if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(modifier = modifier) {
-            Slider(
-                value = if (dragging) dragValue else frac,
-                onValueChange = {
-                    if (!dragging) onDragChange(true)
-                    dragging = true
-                    dragValue = it
-                    if (duration > 0L) onScrub?.invoke((it * duration).toLong())
-                },
-                onValueChangeFinished = {
-                    onSeek((dragValue * duration).toLong())
-                    dragging = false
-                    onDragChange(false)
-                },
-                enabled = duration > 0L,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            val changeFn: (Float) -> Unit = {
+                if (!dragging) onDragChange(true)
+                dragging = true
+                dragValue = it
+                if (duration > 0L) onScrub?.invoke((it * duration).toLong())
+            }
+            val finishFn: () -> Unit = {
+                onSeek((dragValue * duration).toLong())
+                dragging = false
+                onDragChange(false)
+            }
+            if (clean) {
+                ThinSlider(
+                    value = if (dragging) dragValue else frac,
+                    enabled = duration > 0L,
+                    onChange = changeFn,
+                    onFinished = finishFn,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Slider(
+                    value = if (dragging) dragValue else frac,
+                    onValueChange = changeFn,
+                    onValueChangeFinished = finishFn,
+                    enabled = duration > 0L,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (dragging && duration > 0L) {
                 val target = (dragValue * duration).toLong()
                 val bucket = target / 500L
@@ -162,7 +181,7 @@ fun SeekBar(
                         .fillMaxWidth()
                         .layout { measurable, constraints ->
                             val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-                            val inset = 10.dp.roundToPx()
+                            val inset = (if (clean) 4 else 10).dp.roundToPx()
                             val gap = 14.dp.roundToPx()
                             val center = inset + (dragValue * (constraints.maxWidth - 2 * inset)).roundToInt()
                             val x = (center - p.width / 2).coerceIn(0, max(0, constraints.maxWidth - p.width))
@@ -278,6 +297,71 @@ fun BigPlayButton(playing: Boolean, size: Dp, onClick: () -> Unit) {
                 id = if (playing) R.drawable.ic_pause else R.drawable.ic_play,
                 desc = stringResource(if (playing) R.string.pause else R.string.play),
                 modifier = Modifier.size(size * 0.5f),
+            )
+        }
+    }
+}
+
+/** شريط تقدم رفيع أبيض (للوضع النظيف): خط رفيع ونقطة صغيرة، ومنطقة اللمس كبيرة. */
+@Composable
+private fun ThinSlider(
+    value: Float,
+    enabled: Boolean,
+    onChange: (Float) -> Unit,
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val v = value.coerceIn(0f, 1f)
+    Box(
+        modifier = modifier
+            .height(40.dp)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures(onTap = { offset ->
+                    if (size.width > 0) {
+                        onChange((offset.x / size.width).coerceIn(0f, 1f))
+                        onFinished()
+                    }
+                })
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        if (size.width > 0) onChange((offset.x / size.width).coerceIn(0f, 1f))
+                    },
+                    onDragEnd = { onFinished() },
+                    onDragCancel = { onFinished() },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        if (size.width > 0) onChange((change.position.x / size.width).coerceIn(0f, 1f))
+                    },
+                )
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0x59FFFFFF)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(v)
+                    .fillMaxHeight()
+                    .background(Color.White),
+            )
+        }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val thumb = 12.dp
+            Box(
+                modifier = Modifier
+                    .offset(x = (maxWidth - thumb) * v)
+                    .size(thumb)
+                    .clip(CircleShape)
+                    .background(Color.White),
             )
         }
     }

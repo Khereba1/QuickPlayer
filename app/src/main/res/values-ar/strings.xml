@@ -123,6 +123,8 @@
     <string name="resume_desc">الفيديو والصوت الطويل (أكتر من 10 دقايق) يكمل من آخر نقطة وقفت عندها.</string>
     <string name="video_bg_title">تشغيل الفيديو كصوت في الخلفية</string>
     <string name="video_bg_desc">لما تخرج من شاشة الفيديو أو من التطبيق، الصوت يكمل.</string>
+    <string name="clean_player_title">وضع المشغل النظيف</string>
+    <string name="clean_player_desc">شاشة الفيديو بشريط تقدم أبيض رفيع ومن غير أزرار التشغيل الكبيرة. بتتحكم بالإيماءات: اسحب للتقديم والسطوع والصوت، ضغطتين على الجنبين لـ 10 ثواني، وضغطتين في النص للتشغيل والإيقاف.</string>
     <string name="pause_call_title">إيقاف التشغيل وقت المكالمات</string>
     <string name="pause_call_desc">يوقف الصوت لما التليفون يرن أو أثناء المكالمة عشان تسمع الرنة، ويكمّل بعد ما المكالمة تخلص.</string>
     <string name="live_seek_title">تحديث الفيديو أثناء التقديم</string>
