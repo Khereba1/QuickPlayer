@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlin.math.max
+import kotlin.math.PI
 import kotlin.math.roundToInt
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -127,6 +128,7 @@ fun SeekBar(
     onDragChange: (Boolean) -> Unit = {},
     onScrub: ((Long) -> Unit)? = null,
     clean: Boolean = false,
+    playing: Boolean = false,
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
@@ -148,6 +150,7 @@ fun SeekBar(
                 ThinSlider(
                     value = if (dragging) dragValue else frac,
                     enabled = duration > 0L,
+                    playing = playing && !dragging,
                     onChange = changeFn,
                     onFinished = finishFn,
                     modifier = Modifier.fillMaxWidth(),
@@ -304,16 +307,34 @@ fun BigPlayButton(playing: Boolean, size: Dp, onClick: () -> Unit) {
     }
 }
 
-/** شريط تقدم رفيع أبيض (للوضع النظيف): خط رفيع ونقطة صغيرة، ومنطقة اللمس كبيرة. */
+/** شريط تقدم للوضع النظيف: الجزء المتشغّل موجة بيضا بتتحرك (زي تليجرام)، والباقي خط رفيع، والمقبض شرطة رأسية. */
 @Composable
 private fun ThinSlider(
     value: Float,
     enabled: Boolean,
+    playing: Boolean,
     onChange: (Float) -> Unit,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val v = value.coerceIn(0f, 1f)
+    val amp by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (playing) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(400),
+        label = "waveAmp",
+    )
+    var phase by remember { mutableFloatStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(playing) {
+        if (playing) {
+            var last = 0L
+            while (true) {
+                androidx.compose.runtime.withFrameNanos { t ->
+                    if (last != 0L) phase = (phase + (t - last) / 1_000_000_000f * 5f) % (2f * PI.toFloat())
+                    last = t
+                }
+            }
+        }
+    }
     Box(
         modifier = modifier
             .height(40.dp)
@@ -340,30 +361,46 @@ private fun ThinSlider(
                     },
                 )
             },
-        contentAlignment = Alignment.CenterStart,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color(0x59FFFFFF)),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(v)
-                    .fillMaxHeight()
-                    .background(Color.White),
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            val cy = size.height / 2f
+            val stroke = 3.dp.toPx()
+            val thumbW = 4.dp.toPx()
+            val thumbH = 20.dp.toPx()
+            val x = (size.width * v).coerceIn(thumbW / 2f, size.width - thumbW / 2f)
+            val a = 3.dp.toPx() * amp
+            val wl = 22.dp.toPx()
+            // الباقي: خط رفيع شفاف
+            drawLine(
+                color = Color(0x59FFFFFF),
+                start = androidx.compose.ui.geometry.Offset(x, cy),
+                end = androidx.compose.ui.geometry.Offset(size.width, cy),
+                strokeWidth = stroke,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
             )
-        }
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val thumb = 12.dp
-            Box(
-                modifier = Modifier
-                    .offset(x = (maxWidth - thumb) * v)
-                    .size(thumb)
-                    .clip(CircleShape)
-                    .background(Color.White),
+            // المتشغّل: موجة
+            val path = androidx.compose.ui.graphics.Path()
+            var xx = 0f
+            path.moveTo(0f, cy + a * kotlin.math.sin(-phase))
+            while (xx < x) {
+                xx = minOf(xx + 3f, x)
+                path.lineTo(xx, cy + a * kotlin.math.sin(2f * PI.toFloat() * xx / wl - phase))
+            }
+            drawPath(
+                path = path,
+                color = Color.White,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = stroke,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round,
+                ),
+            )
+            // المقبض: شرطة رأسية
+            drawRoundRect(
+                color = Color.White,
+                topLeft = androidx.compose.ui.geometry.Offset(x - thumbW / 2f, cy - thumbH / 2f),
+                size = androidx.compose.ui.geometry.Size(thumbW, thumbH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(thumbW / 2f),
             )
         }
     }

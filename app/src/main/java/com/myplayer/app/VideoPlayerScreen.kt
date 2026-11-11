@@ -14,6 +14,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -459,10 +461,26 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                         // الوضع النظيف: زرار تشغيل/إيقاف صغير في نص الشاشة
                         if (vm.settings.cleanPlayer) {
                             Box(modifier = Modifier.align(Alignment.Center)) {
-                                BigPlayButton(playing = vm.isPlaying, size = 56.dp, onClick = {
-                                    vm.togglePlay()
-                                    tick++
-                                })
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                    color = Color(0x73000000),
+                                    contentColor = Color.White,
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .clickable {
+                                            vm.togglePlay()
+                                            tick++
+                                        },
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Ico(
+                                            if (vm.isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                                            null,
+                                            Modifier.size(28.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -494,6 +512,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     },
                                     onScrub = if (vm.settings.liveSeek) scrubLambda else null,
                                     clean = vm.settings.cleanPlayer,
+                                    playing = vm.isPlaying,
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }
