@@ -129,6 +129,7 @@ fun SeekBar(
     onScrub: ((Long) -> Unit)? = null,
     clean: Boolean = false,
     playing: Boolean = false,
+    speed: Float = 1f,
 ) {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
@@ -148,7 +149,10 @@ fun SeekBar(
             }
             if (clean) {
                 ThinSlider(
-                    value = if (dragging) dragValue else frac,
+                    positionMs = position,
+                    durationMs = duration,
+                    speed = speed,
+                    drag = if (dragging) dragValue else null,
                     enabled = duration > 0L,
                     playing = playing && !dragging,
                     onChange = changeFn,
@@ -310,31 +314,48 @@ fun BigPlayButton(playing: Boolean, size: Dp, onClick: () -> Unit) {
 /** شريط تقدم للوضع النظيف: الجزء المتشغّل موجة بيضا بتتحرك (زي تليجرام)، والباقي خط رفيع، والمقبض شرطة رأسية. */
 @Composable
 private fun ThinSlider(
-    value: Float,
+    positionMs: Long,
+    durationMs: Long,
+    speed: Float,
+    drag: Float?,
     enabled: Boolean,
     playing: Boolean,
     onChange: (Float) -> Unit,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val v = value.coerceIn(0f, 1f)
     val amp by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (playing) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(400),
         label = "waveAmp",
     )
     var phase by remember { mutableFloatStateOf(0f) }
-    androidx.compose.runtime.LaunchedEffect(playing) {
-        if (playing) {
+    // الموضع المعروض بيتحرك كل فريم (60/90 مرة في الثانية) بدل ما يستنى تحديث المشغّل المتقطع
+    var shownMs by remember { mutableFloatStateOf(positionMs.toFloat()) }
+    val syncPos = remember { longArrayOf(positionMs) }
+    val syncAt = remember { longArrayOf(System.nanoTime()) }
+    androidx.compose.runtime.LaunchedEffect(positionMs) {
+        syncPos[0] = positionMs
+        syncAt[0] = System.nanoTime()
+        if (!playing || kotlin.math.abs(shownMs - positionMs) > 700f) shownMs = positionMs.toFloat()
+    }
+    androidx.compose.runtime.LaunchedEffect(playing, speed, durationMs) {
+        if (!playing) {
+            shownMs = syncPos[0].toFloat()
+        } else {
             var last = 0L
             while (true) {
                 androidx.compose.runtime.withFrameNanos { t ->
                     if (last != 0L) phase = (phase + (t - last) / 1_000_000_000f * 5f) % (2f * PI.toFloat())
                     last = t
+                    val est = syncPos[0] + (System.nanoTime() - syncAt[0]) / 1_000_000f * speed
+                    val capped = if (durationMs > 0L) minOf(est, durationMs.toFloat()) else est
+                    if (capped > shownMs) shownMs = capped
                 }
             }
         }
     }
+    val v = (drag ?: if (durationMs > 0L) shownMs / durationMs.toFloat() else 0f).coerceIn(0f, 1f)
     Box(
         modifier = modifier
             .height(40.dp)

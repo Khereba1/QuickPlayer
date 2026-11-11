@@ -513,6 +513,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     onScrub = if (vm.settings.liveSeek) scrubLambda else null,
                                     clean = vm.settings.cleanPlayer,
                                     playing = vm.isPlaying,
+                                    speed = vm.speed,
                                 )
                                 Text(formatTime(vm.durationMs), style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                             }

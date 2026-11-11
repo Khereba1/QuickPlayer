@@ -120,6 +120,7 @@
     <string name="amoled">Pure black</string>
     <string name="amoled_desc">Pure black background in dark theme (saves battery on OLED screens).</string>
 
+    <string name="settings_video_screen">Video screen</string>
     <string name="settings_playback">Playback</string>
     <string name="resume_title">Resume where you left off</string>
     <string name="resume_desc">Videos and long audio (over 10 minutes) continue from the last position.</string>

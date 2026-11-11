@@ -118,6 +118,7 @@
     <string name="amoled">أسود خالص</string>
     <string name="amoled_desc">خلفية سوداء تماماً في الثيم الداكن (توفر بطارية على شاشات OLED).</string>
 
+    <string name="settings_video_screen">شاشة الفيديو</string>
     <string name="settings_playback">التشغيل</string>
     <string name="resume_title">الاستكمال من آخر موضع</string>
     <string name="resume_desc">الفيديو والصوت الطويل (أكتر من 10 دقايق) يكمل من آخر نقطة وقفت عندها.</string>
