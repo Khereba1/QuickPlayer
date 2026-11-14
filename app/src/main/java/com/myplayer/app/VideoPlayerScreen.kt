@@ -24,6 +24,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -149,6 +150,8 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller?.hide(WindowInsetsCompat.Type.systemBars())
         if (window != null) {
+            // الفيديو يملى الشاشة كلها حتى ورا الكاميرا، ونرجّع الوضع العادي عند الخروج
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             val attrs = window.attributes
             attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             window.attributes = attrs
@@ -157,6 +160,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
         onDispose {
             controller?.show(WindowInsetsCompat.Type.systemBars())
             if (window != null) {
+                WindowCompat.setDecorFitsSystemWindows(window, true)
                 val attrs = window.attributes
                 attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
                 attrs.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
@@ -196,6 +200,9 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     }
 
     LaunchedEffect(item?.mediaId) { vm.setVideoEnabled(true) }
+
+    // كل فيديو جديد يبدأ بالوضع العادي (Fit)
+    LaunchedEffect(item?.mediaId) { vm.settings.updateResizeMode(0) }
 
     // تلميح الوضع النظيف: مرة واحدة بس، أول ما يتفتح فيديو والوضع مفعّل
     LaunchedEffect(vm.settings.cleanPlayer, item?.mediaId) {
@@ -410,7 +417,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                     exit = fadeOut(),
                 ) {
                     Surface(
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier.displayCutoutPadding().padding(24.dp),
                         shape = RoundedCornerShape(50),
                         color = Color(0xB3000000),
                         contentColor = Color.White,
@@ -427,7 +434,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().displayCutoutPadding()) {
                         // الشريط العلوي
                         Row(
                             modifier = Modifier
