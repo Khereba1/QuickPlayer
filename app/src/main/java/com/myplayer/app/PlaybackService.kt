@@ -104,21 +104,46 @@ class PlaybackService : MediaSessionService() {
 
     // ---- إدارة تركيز الصوت بنفسنا: أي صوت تاني (واتساب مثلاً) = نوقف، ونكمل لما يخلص ----
     private var focusRequest: AudioFocusRequest? = null
+    private var ducked = false
+    private val pauseIfStillDucked = Runnable {
+        val p = exo
+        if (p != null && ducked && p.playWhenReady) {
+            // الصوت الخارجي طوّل (مش إشعار قصير): نوقف لحد ما يخلص
+            pausedByFocus = true
+            focusLossAt = android.os.SystemClock.elapsedRealtime()
+            AppLog.log("AUDIO", "the other sound is long: pausing until it ends")
+            p.pause()
+        }
+    }
+
     private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
         val p = exo
         if (p != null) {
             AppLog.log("AUDIO", "audio focus change=" + change + " (playWhenReady=" + p.playWhenReady + ")")
             when (change) {
                 AudioManager.AUDIOFOCUS_GAIN -> {
+                    handler.removeCallbacks(pauseIfStillDucked)
+                    if (ducked) {
+                        ducked = false
+                        p.volume = 1f
+                    }
                     if (pausedByFocus) {
                         pausedByFocus = false
                         AppLog.log("AUDIO", "focus is back: resuming playback")
                         p.play()
                     }
                 }
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                    // صوت قصير (رسالة صوتية مثلاً): نوقف بدل ما نخفض الصوت، ونكمل أول ما يخلص
+                    // غالباً إشعار قصير: نخفض الصوت شوية، ولو الصوت الخارجي طوّل أكتر من ثانيتين ونص نوقف
+                    if (p.playWhenReady && !ducked) {
+                        ducked = true
+                        p.volume = 0.25f
+                        handler.removeCallbacks(pauseIfStillDucked)
+                        handler.postDelayed(pauseIfStillDucked, 2500L)
+                    }
+                }
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    // صوت مؤقت واضح (مكالمة، رسالة صوتية): نوقف على طول ونكمل أول ما يخلص
                     if (p.playWhenReady) {
                         pausedByFocus = true
                         focusLossAt = android.os.SystemClock.elapsedRealtime()
@@ -268,6 +293,11 @@ class PlaybackService : MediaSessionService() {
                 if (playWhenReady) {
                     // تشغيل (منك أو استكمال تلقائي): ناخد التركيز، ولو أنت اللي شغّلت مفيش استكمال تلقائي
                     pausedByFocus = false
+                    if (ducked) {
+                        ducked = false
+                        handler.removeCallbacks(pauseIfStillDucked)
+                    }
+                    exo?.volume = 1f
                     requestAudioFocus()
                 } else if (!pausedByFocus && !pausedByCall) {
                     // إيقاف منك: نسيب التركيز عشان غيرنا يرجع
