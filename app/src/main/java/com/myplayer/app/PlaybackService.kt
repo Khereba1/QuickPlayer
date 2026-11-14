@@ -2,6 +2,7 @@ package com.myplayer.app
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -91,7 +92,7 @@ class PlaybackService : MediaSessionService() {
                 return
             }
             if (!inCall && !other) quietPolls++ else quietPolls = 0
-            if (quietPolls >= 3) {
+            if (quietPolls >= 4) {
                 pausedByFocus = false
                 AppLog.log("AUDIO", "the other sound ended: resuming playback")
                 p.play()
@@ -99,6 +100,69 @@ class PlaybackService : MediaSessionService() {
             }
             handler.postDelayed(this, 600L)
         }
+    }
+
+    // ---- إدارة تركيز الصوت بنفسنا: أي صوت تاني (واتساب مثلاً) = نوقف، ونكمل لما يخلص ----
+    private var focusRequest: AudioFocusRequest? = null
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        val p = exo
+        if (p != null) {
+            AppLog.log("AUDIO", "audio focus change=" + change + " (playWhenReady=" + p.playWhenReady + ")")
+            when (change) {
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    if (pausedByFocus) {
+                        pausedByFocus = false
+                        AppLog.log("AUDIO", "focus is back: resuming playback")
+                        p.play()
+                    }
+                }
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                    // صوت قصير (رسالة صوتية مثلاً): نوقف بدل ما نخفض الصوت، ونكمل أول ما يخلص
+                    if (p.playWhenReady) {
+                        pausedByFocus = true
+                        focusLossAt = android.os.SystemClock.elapsedRealtime()
+                        p.pause()
+                    }
+                }
+                AudioManager.AUDIOFOCUS_LOSS -> {
+                    if (p.playWhenReady) {
+                        pausedByFocus = true
+                        focusLossAt = android.os.SystemClock.elapsedRealtime()
+                        quietPolls = 0
+                        p.pause()
+                        handler.removeCallbacks(focusPoll)
+                        handler.postDelayed(focusPoll, 1500L)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun requestAudioFocus() {
+        val am = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager ?: return
+        if (focusRequest == null) {
+            focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                )
+                .setOnAudioFocusChangeListener(focusListener, handler)
+                .setWillPauseWhenDucked(true)
+                .build()
+        }
+        val r = am.requestAudioFocus(focusRequest!!)
+        if (r != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            AppLog.log("AUDIO", "audio focus request result=" + r)
+        }
+    }
+
+    private fun abandonAudioFocus() {
+        val am = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager ?: return
+        val req = focusRequest ?: return
+        am.abandonAudioFocusRequest(req)
     }
 
     private val callback = object : MediaSession.Callback {
@@ -180,7 +244,7 @@ class PlaybackService : MediaSessionService() {
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .setUsage(C.USAGE_MEDIA)
                     .build(),
-                true,
+                false,
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
@@ -201,16 +265,13 @@ class PlaybackService : MediaSessionService() {
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS && !playWhenReady) {
-                    AppLog.log("AUDIO", "paused by audio focus loss (another app or a call took the audio)")
-                    pausedByFocus = true
-                    focusLossAt = android.os.SystemClock.elapsedRealtime()
-                    quietPolls = 0
-                    handler.removeCallbacks(focusPoll)
-                    handler.postDelayed(focusPoll, 800L)
-                } else if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
-                    // أنت اللي ضغطت تشغيل أو إيقاف: مفيش استكمال تلقائي
+                if (playWhenReady) {
+                    // تشغيل (منك أو استكمال تلقائي): ناخد التركيز، ولو أنت اللي شغّلت مفيش استكمال تلقائي
                     pausedByFocus = false
+                    requestAudioFocus()
+                } else if (!pausedByFocus && !pausedByCall) {
+                    // إيقاف منك: نسيب التركيز عشان غيرنا يرجع
+                    abandonAudioFocus()
                 }
             }
 
@@ -239,6 +300,7 @@ class PlaybackService : MediaSessionService() {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 // ملف جاي من برا التطبيق وخلص: نشيل الإشعار تماماً
                 if (playbackState == Player.STATE_ENDED) {
+                    abandonAudioFocus()
                     val external = player.currentMediaItem?.mediaId?.startsWith("ext:") == true
                     if (external && !player.hasNextMediaItem() && player.repeatMode == Player.REPEAT_MODE_OFF) {
                         closePlayback("external file finished")
@@ -298,6 +360,7 @@ class PlaybackService : MediaSessionService() {
             it.player.release()
             it.release()
         }
+        abandonAudioFocus()
         handler.removeCallbacksAndMessages(null)
         mediaSession = null
         exo = null
