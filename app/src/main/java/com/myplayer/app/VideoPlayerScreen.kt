@@ -24,6 +24,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +58,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -145,6 +150,15 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
 
     // وضع ملء الشاشة + منع انطفاء الشاشة + استعادة كل حاجة عند الخروج
     val edgeVideo = vm.settings.edgeVideo
+
+    // مسافة متساوية على الجهتين: اللي جنب الكاميرا بتتكرر على الجهة التانية (في وضع ملء الشاشة بس)
+    val cutDensity = LocalDensity.current
+    val cutDir = LocalLayoutDirection.current
+    val cutInsets = WindowInsets.displayCutout
+    val cutLeft = cutInsets.getLeft(cutDensity, cutDir)
+    val cutRight = cutInsets.getRight(cutDensity, cutDir)
+    val extraLeft = if (edgeVideo) with(cutDensity) { maxOf(0, cutRight - cutLeft).toDp() } else 0.dp
+    val extraRight = if (edgeVideo) with(cutDensity) { maxOf(0, cutLeft - cutRight).toDp() } else 0.dp
     DisposableEffect(edgeVideo) {
         val window = activity?.window
         val controller: WindowInsetsControllerCompat? = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
@@ -418,7 +432,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                     exit = fadeOut(),
                 ) {
                     Surface(
-                        modifier = Modifier.displayCutoutPadding().padding(24.dp),
+                        modifier = Modifier.displayCutoutPadding().absolutePadding(left = extraLeft, right = extraRight).padding(24.dp),
                         shape = RoundedCornerShape(50),
                         color = Color(0xB3000000),
                         contentColor = Color.White,
@@ -443,6 +457,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 .fillMaxWidth()
                                 .background(Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent)))
                                 .displayCutoutPadding()
+                                .absolutePadding(left = extraLeft, right = extraRight)
                                 .padding(horizontal = 8.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -500,6 +515,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 .fillMaxWidth()
                                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
                                 .displayCutoutPadding()
+                                .absolutePadding(left = extraLeft, right = extraRight)
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

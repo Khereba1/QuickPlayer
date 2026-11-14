@@ -141,7 +141,7 @@
     <string name="stop_end_on">Will stop when this one ends</string>
     <string name="stop_end_off">Will continue to the next item</string>
     <string name="edge_video_title">Fill the whole screen</string>
-    <string name="edge_video_desc">The video and its shading extend behind the camera cutout and system bars. Turn off to use the older layout that keeps clear of them.</string>
+    <string name="edge_video_desc">The video and its shading extend behind the camera cutout and system bars. Controls keep an equal margin on both sides.</string>
     <string name="pause_call_title">Pause during calls</string>
     <string name="pause_call_desc">Stops playback while the phone rings or during a call so you can hear it, then resumes when the call ends.</string>
     <string name="live_seek_title">Live video while seeking</string>

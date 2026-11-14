@@ -139,7 +139,7 @@
     <string name="stop_end_on">هيقف لما المقطع ده يخلص</string>
     <string name="stop_end_off">هيكمل على المقطع اللي بعده</string>
     <string name="edge_video_title">ملء الشاشة بالكامل</string>
-    <string name="edge_video_desc">الفيديو والتظليل يمتدوا ورا الكاميرا وأشرطة النظام. اطفيه لو عايز الشكل القديم اللي بيبعد عنهم.</string>
+    <string name="edge_video_desc">الفيديو والتظليل يمتدوا ورا الكاميرا وأشرطة النظام. والأزرار بتسيب مسافة متساوية على الجهتين.</string>
     <string name="pause_call_title">إيقاف التشغيل وقت المكالمات</string>
     <string name="pause_call_desc">يوقف الصوت لما التليفون يرن أو أثناء المكالمة عشان تسمع الرنة، ويكمّل بعد ما المكالمة تخلص.</string>
     <string name="live_seek_title">تحديث الفيديو أثناء التقديم</string>
