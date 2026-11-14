@@ -538,7 +538,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                     Ico(
                                         R.drawable.ic_stop_end,
                                         stringResource(R.string.stop_end_title),
-                                        tint = if (vm.settings.stopAtEnd) MaterialTheme.colorScheme.primary else Color.White,
+                                        tint = if (vm.settings.stopAtEnd) androidx.compose.material3.MaterialTheme.colorScheme.primary else Color.White,
                                     )
                                 }
                             }
