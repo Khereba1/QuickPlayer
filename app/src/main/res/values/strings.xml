@@ -136,6 +136,10 @@
     <string name="clean_hint_swipe">Swipe with two fingers to switch videos</string>
     <string name="clean_hint_tap">Double-tap the middle to play or pause</string>
     <string name="clean_hint_ok">Got it</string>
+    <string name="stop_end_title">Stop after each item</string>
+    <string name="stop_end_desc">When a song or video finishes, stop instead of moving on to the next one in the list.</string>
+    <string name="stop_end_on">Will stop when this one ends</string>
+    <string name="stop_end_off">Will continue to the next item</string>
     <string name="pause_call_title">Pause during calls</string>
     <string name="pause_call_desc">Stops playback while the phone rings or during a call so you can hear it, then resumes when the call ends.</string>
     <string name="live_seek_title">Live video while seeking</string>

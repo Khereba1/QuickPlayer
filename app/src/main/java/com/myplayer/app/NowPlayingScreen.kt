@@ -157,6 +157,13 @@ fun NowPlayingScreen(vm: PlayerViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ChipAction(speedLabel(vm.speed), vm.speed != 1f) { showSpeed = true }
+                IconButton(onClick = { vm.settings.updateStopAtEnd(!vm.settings.stopAtEnd) }) {
+                    Ico(
+                        R.drawable.ic_stop_end,
+                        stringResource(R.string.stop_end_title),
+                        tint = if (vm.settings.stopAtEnd) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 val sleepOn = vm.sleepLeft > 0L || vm.sleepEndOfTrack
                 IconButton(onClick = { showSleep = true }) {
                     Ico(

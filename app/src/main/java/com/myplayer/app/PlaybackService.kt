@@ -73,6 +73,34 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    // ---- لو صوت خارجي أخد التركيز نهائياً (مثلاً إشعار أو رسالة صوتية) نكمل لوحدنا لما يخلص ----
+    private var pausedByFocus = false
+    private var focusLossAt = 0L
+    private var quietPolls = 0
+    private val focusPoll = object : Runnable {
+        override fun run() {
+            val p = exo ?: return
+            if (!pausedByFocus) return
+            val am = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
+            val mode = am?.mode ?: AudioManager.MODE_NORMAL
+            val inCall = mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_IN_CALL ||
+                mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_CALL_SCREENING
+            val other = am?.isMusicActive == true
+            if (android.os.SystemClock.elapsedRealtime() - focusLossAt > 180_000L || p.playWhenReady) {
+                pausedByFocus = false
+                return
+            }
+            if (!inCall && !other) quietPolls++ else quietPolls = 0
+            if (quietPolls >= 3) {
+                pausedByFocus = false
+                AppLog.log("AUDIO", "the other sound ended: resuming playback")
+                p.play()
+                return
+            }
+            handler.postDelayed(this, 600L)
+        }
+    }
+
     private val callback = object : MediaSession.Callback {
         override fun onConnect(
             session: MediaSession,
@@ -173,14 +201,38 @@ class PlaybackService : MediaSessionService() {
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS && !playWhenReady) {
                     AppLog.log("AUDIO", "paused by audio focus loss (another app or a call took the audio)")
+                    pausedByFocus = true
+                    focusLossAt = android.os.SystemClock.elapsedRealtime()
+                    quietPolls = 0
+                    handler.removeCallbacks(focusPoll)
+                    handler.postDelayed(focusPoll, 800L)
+                } else if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
+                    // أنت اللي ضغطت تشغيل أو إيقاف: مفيش استكمال تلقائي
+                    pausedByFocus = false
                 }
             }
 
             override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
                 if (playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE) {
                     AppLog.log("AUDIO", "playback suppressed, reason=" + playbackSuppressionReason)
+                }
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) {
+                // "إيقاف بعد كل مقطع": لما المقطع يخلص لوحده نوقف ونرجع لأوله بدل ما ندخل على اللي بعده
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
+                    getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean("stop_at_end", false)
+                ) {
+                    val idx = oldPosition.mediaItemIndex
+                    player.pause()
+                    if (idx in 0 until player.mediaItemCount) player.seekTo(idx, 0L)
+                    AppLog.log("PLAY", "stopped at the end of the item (stop after each item is on)")
                 }
             }
 

@@ -186,6 +186,14 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var liveSeek by mutableStateOf(prefs.getBoolean("live_seek", true))
         private set
+    var stopAtEnd by mutableStateOf(prefs.getBoolean("stop_at_end", false))
+        private set
+
+    fun updateStopAtEnd(v: Boolean) {
+        stopAtEnd = v
+        prefs.edit().putBoolean("stop_at_end", v).apply()
+    }
+
     var cleanPlayer by mutableStateOf(prefs.getBoolean("clean_player", false))
         private set
 

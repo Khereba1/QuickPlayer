@@ -527,6 +527,20 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 TextButton(onClick = { showSpeed = true }) {
                                     Text(speedLabel(vm.speed), color = Color.White)
                                 }
+                                IconButton(onClick = {
+                                    val on = !vm.settings.stopAtEnd
+                                    vm.settings.updateStopAtEnd(on)
+                                    indicator = Indicator(
+                                        R.drawable.ic_stop_end,
+                                        ctx.getString(if (on) R.string.stop_end_on else R.string.stop_end_off),
+                                    )
+                                }) {
+                                    Ico(
+                                        R.drawable.ic_stop_end,
+                                        stringResource(R.string.stop_end_title),
+                                        tint = if (vm.settings.stopAtEnd) MaterialTheme.colorScheme.primary else Color.White,
+                                    )
+                                }
                             }
                             val rightTools: @Composable () -> Unit = {
                                 IconButton(onClick = {
