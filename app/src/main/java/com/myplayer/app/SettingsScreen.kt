@@ -153,6 +153,7 @@ fun SettingsScreen(vm: PlayerViewModel, onLanguageChanged: () -> Unit) {
         // ---- شاشة الفيديو ----
         SectionTitle(stringResource(R.string.settings_video_screen))
         SwitchRow(stringResource(R.string.live_seek_title), stringResource(R.string.live_seek_desc), s.liveSeek) { s.updateLiveSeek(it) }
+        SwitchRow(stringResource(R.string.edge_video_title), stringResource(R.string.edge_video_desc), s.edgeVideo) { s.updateEdgeVideo(it) }
         SwitchRow(stringResource(R.string.clean_player_title), stringResource(R.string.clean_player_desc), s.cleanPlayer) { s.updateCleanPlayer(it) }
 
         // ---- المكتبة ----

@@ -186,6 +186,14 @@ class AppSettings(private val prefs: SharedPreferences) {
         private set
     var liveSeek by mutableStateOf(prefs.getBoolean("live_seek", true))
         private set
+    var edgeVideo by mutableStateOf(prefs.getBoolean("edge_video", true))
+        private set
+
+    fun updateEdgeVideo(v: Boolean) {
+        edgeVideo = v
+        prefs.edit().putBoolean("edge_video", v).apply()
+    }
+
     var stopAtEnd by mutableStateOf(prefs.getBoolean("stop_at_end", false))
         private set
 

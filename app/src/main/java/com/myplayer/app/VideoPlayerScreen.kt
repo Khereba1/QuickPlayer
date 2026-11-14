@@ -144,14 +144,15 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     }
 
     // وضع ملء الشاشة + منع انطفاء الشاشة + استعادة كل حاجة عند الخروج
-    DisposableEffect(Unit) {
+    val edgeVideo = vm.settings.edgeVideo
+    DisposableEffect(edgeVideo) {
         val window = activity?.window
         val controller: WindowInsetsControllerCompat? = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller?.hide(WindowInsetsCompat.Type.systemBars())
         if (window != null) {
             // الفيديو يملى الشاشة كلها حتى ورا الكاميرا، ونرجّع الوضع العادي عند الخروج
-            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowCompat.setDecorFitsSystemWindows(window, !edgeVideo)
             val attrs = window.attributes
             attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             window.attributes = attrs
@@ -434,13 +435,14 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
-                    Box(modifier = Modifier.fillMaxSize().displayCutoutPadding()) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         // الشريط العلوي
                         Row(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .fillMaxWidth()
                                 .background(Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent)))
+                                .displayCutoutPadding()
                                 .padding(horizontal = 8.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -497,6 +499,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
+                                .displayCutoutPadding()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
