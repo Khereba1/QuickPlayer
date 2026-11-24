@@ -89,7 +89,57 @@ object AppLog {
             log("SYSTEM", "the previous process was killed by the system while playback service was alive (no clean shutdown)")
             prefs.edit().putBoolean("svc_alive", false).commit()
         }
+        checkLastExit(context, prefs)
         log("APP", "Started. Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL)
+    }
+
+    /** بيقرأ سبب آخر إغلاق للتطبيق (أندرويد 11+)، ويسجّله، ولو غير عادي بيحفظ ملف صغير في Download/QuickPlayer/Logs. */
+    private fun checkLastExit(context: Context, prefs: android.content.SharedPreferences) {
+        if (Build.VERSION.SDK_INT < 30) return
+        try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val list = am.getHistoricalProcessExitReasons(context.packageName, 0, 1)
+            val info = list.firstOrNull() ?: return
+            if (info.timestamp <= prefs.getLong("last_exit_ts", 0L)) return
+            prefs.edit().putLong("last_exit_ts", info.timestamp).apply()
+            val name = when (info.reason) {
+                android.app.ApplicationExitInfo.REASON_ANR -> "ANR (not responding)"
+                android.app.ApplicationExitInfo.REASON_CRASH -> "CRASH"
+                android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "CRASH_NATIVE"
+                android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW_MEMORY"
+                android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "EXCESSIVE_RESOURCE_USAGE"
+                android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "INITIALIZATION_FAILURE"
+                android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
+                android.app.ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED (killed by system/vendor)"
+                android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "USER_REQUESTED"
+                android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "USER_STOPPED"
+                android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
+                android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE"
+                else -> "OTHER(" + info.reason + ")"
+            }
+            val whenText = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(info.timestamp))
+            val line = "previous exit: " + name + " at " + whenText + ", importance=" + info.importance +
+                ", pss=" + info.pss + "KB, " + (info.description ?: "")
+            log("EXIT", line)
+            val abnormal = when (info.reason) {
+                android.app.ApplicationExitInfo.REASON_ANR,
+                android.app.ApplicationExitInfo.REASON_CRASH_NATIVE,
+                android.app.ApplicationExitInfo.REASON_LOW_MEMORY,
+                android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE,
+                android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE,
+                android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> true
+                else -> false
+            }
+            if (abnormal) {
+                writeToDownloads(
+                    "QuickPlayer-exit.txt",
+                    "QuickPlayer abnormal exit\nAndroid " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " +
+                        Build.MANUFACTURER + " " + Build.MODEL + "\n" + line + "\n",
+                )
+            }
+        } catch (e: Throwable) {
+            // ignore
+        }
     }
 
     /** بيكتب ملف نصي في Download/QuickPlayer/Logs (بيستبدل القديم بنفس الاسم). */
