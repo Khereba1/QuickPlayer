@@ -425,6 +425,12 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
                 PlaylistRow(R.drawable.ic_status, stringResource(R.string.status_title), 0, stringResource(R.string.status_sub)) { open = "status" }
             }
             item {
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+            }
+            item {
                 PlaylistRow(R.drawable.ic_favorite, stringResource(R.string.favorites_title), vm.entriesFor(vm.favorites.toList()).size) { open = "fav" }
             }
             item {

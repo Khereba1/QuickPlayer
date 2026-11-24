@@ -861,7 +861,8 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         val c = controller ?: return
         if (c.currentMediaItem?.isVideoItem() == true) {
             // لو ضغطت زرار "تحويل لصوت" ده طلب صريح منك فمنوقفش، والإعداد بيأثر على الخروج العادي بس
-            if (!settings.videoBackground && !audioOnlyMode) c.pause()
+            // الإعداد بيطبق بس لو خرجت من التطبيق وإنت في شاشة الفيديو نفسها؛ لو كنت راجع للقائمة وشغّلته من الشريط السفلي فهو طلب منك ويكمّل
+            if (!settings.videoBackground && !audioOnlyMode && showPlayer) c.pause()
             // بنوقف فك الفيديو أثناء الخلفية لتوفير البطارية، والصوت يكمّل عادي
             c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
