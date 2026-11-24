@@ -424,7 +424,7 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(

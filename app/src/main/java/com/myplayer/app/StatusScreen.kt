@@ -792,18 +792,33 @@ private fun StatusVideoPage(
                 }
             }
             if (dur > 0L) {
-                androidx.compose.material3.Slider(
-                    value = (pos.toFloat() / dur.toFloat()).coerceIn(0f, 1f),
-                    onValueChange = { f ->
-                        pos = (f * dur).toLong()
-                        player?.seekTo(pos)
-                    },
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(Color.Transparent, Color(0xCC000000)),
+                            ),
+                        )
                         .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(formatTime(pos), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                    SeekBar(
+                        position = pos,
+                        duration = dur,
+                        onSeek = { t ->
+                            pos = t
+                            player?.seekTo(t)
+                        },
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                        clean = vm.settings.cleanPlayer,
+                        playing = playing,
+                    )
+                    Text(formatTime(dur), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }
