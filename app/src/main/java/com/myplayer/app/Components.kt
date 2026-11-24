@@ -13,7 +13,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.layout.matchParentSize
 import kotlin.math.abs
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
