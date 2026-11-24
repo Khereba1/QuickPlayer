@@ -44,29 +44,24 @@ class App : Application() {
 object AppLog {
     private var file: File? = null
     private val lock = Any()
-    private const val MAX_BYTES = 200_000
 
     private var appContext: Context? = null
     private var startedAt = 0L
     private val buffer = java.util.ArrayDeque<String>()
     private const val MAX_LINES = 300
 
-    @Volatile
-    var enabled = false
-        private set
-
-    /** تشغيل/إيقاف كتابة السجل على الملف. الإيقاف: آخر سطور بتتحفظ في الذاكرة بس (للكراش). */
-    fun setEnabled(v: Boolean) {
-        enabled = v
-        appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putBoolean("log_enabled", v)?.apply()
-    }
 
     fun init(context: Context) {
         if (file != null) return
         appContext = context.applicationContext
-        enabled = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("log_enabled", false)
         startedAt = SystemClock.elapsedRealtime()
         file = File(context.filesDir, "app.log")
+        // السجل دلوقتي في الذاكرة بس: نمسح الملف القديم لو موجود
+        try {
+            file?.delete()
+        } catch (e: Throwable) {
+            // ignore
+        }
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
@@ -144,40 +139,13 @@ object AppLog {
         synchronized(lock) {
             buffer.addLast(entry)
             while (buffer.size > MAX_LINES) buffer.removeFirst()
-            val f = file
-            if (enabled && f != null) {
-                try {
-                    if (f.exists() && f.length() > MAX_BYTES) {
-                        val text = f.readText()
-                        f.writeText(text.takeLast(MAX_BYTES / 2))
-                    }
-                    f.appendText(entry)
-                } catch (e: Throwable) {
-                    // ignore
-                }
-            }
         }
     }
 
-    fun read(): String {
-        if (!enabled) {
-            return synchronized(lock) { buffer.joinToString("") }
-        }
-        val f = file ?: return ""
-        return try {
-            if (f.exists()) f.readText() else ""
-        } catch (e: Throwable) {
-            ""
-        }
-    }
+    fun read(): String = synchronized(lock) { buffer.joinToString("") }
 
     fun clear() {
         synchronized(lock) { buffer.clear() }
-        try {
-            file?.writeText("")
-        } catch (e: Throwable) {
-            // ignore
-        }
     }
 }
 
