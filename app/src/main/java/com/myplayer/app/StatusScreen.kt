@@ -1,6 +1,16 @@
 package com.myplayer.app
 
 import android.content.ClipData
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.PointerEventPass
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -338,7 +348,7 @@ fun StatusScreen(vm: PlayerViewModel, onBack: () -> Unit) {
     }
 
     val selected = remember { mutableStateListOf<String>() }
-    var viewer by remember { mutableStateOf<StatusItem?>(null) }
+    var viewer by remember { mutableStateOf<Int?>(null) }
     BackHandler(enabled = viewer != null && !vm.showPlayer) { viewer = null }
     BackHandler(enabled = viewer == null && selected.isNotEmpty() && !vm.showPlayer) { selected.clear() }
 
@@ -348,7 +358,6 @@ fun StatusScreen(vm: PlayerViewModel, onBack: () -> Unit) {
         2 -> all.filter { !it.isVideo }
         else -> all
     }
-    val videoEntries = all.filter { it.isVideo }.map { it.toEntry() }
 
     fun saveItems(list: List<StatusItem>) {
         scope.launch {
@@ -373,6 +382,7 @@ fun StatusScreen(vm: PlayerViewModel, onBack: () -> Unit) {
                     Text(
                         stringResource(R.string.status_title),
                         style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { tick++ }, enabled = tree != null) {
@@ -460,11 +470,8 @@ fun StatusScreen(vm: PlayerViewModel, onBack: () -> Unit) {
                                 onClick = {
                                     if (selected.isNotEmpty()) {
                                         if (selected.contains(item.docId)) selected.remove(item.docId) else selected.add(item.docId)
-                                    } else if (item.isVideo) {
-                                        val index = videoEntries.indexOfFirst { it.key == "status:" + item.docId }
-                                        if (index >= 0) vm.play(videoEntries, index)
                                     } else {
-                                        viewer = item
+                                        viewer = shown.indexOfFirst { it.docId == item.docId }
                                     }
                                 },
                                 onLongClick = {
@@ -477,13 +484,15 @@ fun StatusScreen(vm: PlayerViewModel, onBack: () -> Unit) {
             }
         }
 
-        val view = viewer
-        if (view != null) {
-            PhotoViewer(
-                item = view,
+        val vi = viewer
+        if (vi != null && shown.isNotEmpty()) {
+            StatusViewer(
+                vm = vm,
+                items = shown,
+                startIndex = vi,
                 onClose = { viewer = null },
-                onSave = { saveItems(listOf(view)) },
-                onShare = { shareItem(ctx, view) },
+                onSave = { saveItems(listOf(it)) },
+                onShare = { shareItem(ctx, it) },
             )
         }
     }
@@ -555,57 +564,39 @@ private fun StatusCell(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun PhotoViewer(
-    item: StatusItem,
+private fun StatusViewer(
+    vm: PlayerViewModel,
+    items: List<StatusItem>,
+    startIndex: Int,
     onClose: () -> Unit,
-    onSave: () -> Unit,
-    onShare: () -> Unit,
+    onSave: (StatusItem) -> Unit,
+    onShare: (StatusItem) -> Unit,
 ) {
-    val ctx = LocalContext.current
-    val bmp by produceState<Bitmap?>(null, item.docId) {
-        value = withContext(Dispatchers.IO) { decodeImage(ctx, item.uri, 1600) }
-    }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offX by remember { mutableFloatStateOf(0f) }
-    var offY by remember { mutableFloatStateOf(0f) }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = startIndex.coerceIn(0, items.lastIndex),
+    ) { items.size }
     var bars by remember { mutableStateOf(true) }
+    var zoomed by remember { mutableStateOf(false) }
+    val page = pager.currentPage.coerceIn(0, items.lastIndex)
+    val cur = items[page]
+    LaunchedEffect(page) { zoomed = false }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        val b = bmp
-        if (b != null) {
-            Image(
-                bitmap = b.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offX, translationY = offY)
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            if (scale > 1f) {
-                                offX += pan.x
-                                offY += pan.y
-                            } else {
-                                offX = 0f
-                                offY = 0f
-                            }
-                        }
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { bars = !bars },
-                            onDoubleTap = {
-                                scale = 1f
-                                offX = 0f
-                                offY = 0f
-                            },
-                        )
-                    },
-            )
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = !zoomed,
+            beyondViewportPageCount = 0,
+            key = { items[it].docId },
+        ) { index ->
+            val st = items[index]
+            if (st.isVideo) {
+                StatusVideoPage(vm, st, active = pager.currentPage == index, bars = bars, onToggle = { bars = !bars })
+            } else {
+                StatusPhotoPage(st, onToggle = { bars = !bars }, onZoom = { z -> if (pager.currentPage == index) zoomed = z })
+            }
         }
         if (bars) {
             Row(
@@ -623,15 +614,196 @@ private fun PhotoViewer(
             ) {
                 IconButton(onClick = onClose) { Ico(R.drawable.ic_back, stringResource(R.string.back), tint = Color.White) }
                 Text(
-                    text = item.name,
+                    text = (page + 1).toString() + " / " + items.size,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                IconButton(onClick = onShare) { Ico(R.drawable.ic_share, stringResource(R.string.status_share), tint = Color.White) }
-                IconButton(onClick = onSave) { Ico(R.drawable.ic_download, stringResource(R.string.status_save), tint = Color.White) }
+                IconButton(onClick = { onShare(cur) }) { Ico(R.drawable.ic_share, stringResource(R.string.status_share), tint = Color.White) }
+                IconButton(onClick = { onSave(cur) }) { Ico(R.drawable.ic_download, stringResource(R.string.status_save), tint = Color.White) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusPhotoPage(item: StatusItem, onToggle: () -> Unit, onZoom: (Boolean) -> Unit) {
+    val ctx = LocalContext.current
+    val bmp by produceState<Bitmap?>(null, item.docId) {
+        value = withContext(Dispatchers.IO) { decodeImage(ctx, item.uri, 1600) }
+    }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offX by remember { mutableFloatStateOf(0f) }
+    var offY by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(scale > 1f) { onZoom(scale > 1f) }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val b = bmp
+        if (b != null) {
+            Image(
+                bitmap = b.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offX, translationY = offY)
+                    .pointerInput(Unit) {
+                        // التكبير بصباعين بس (أو السحب لو متكبرة)، وغير كده السحب الأفقي يروح للتقليب
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.count { c -> c.pressed }
+                                if (pressed >= 2 || scale > 1f) {
+                                    val zoom = event.calculateZoom()
+                                    val pan = event.calculatePan()
+                                    scale = (scale * zoom).coerceIn(1f, 5f)
+                                    if (scale > 1f) {
+                                        offX += pan.x
+                                        offY += pan.y
+                                    } else {
+                                        offX = 0f
+                                        offY = 0f
+                                    }
+                                    event.changes.forEach { c -> if (c.positionChanged()) c.consume() }
+                                }
+                            } while (event.changes.any { c -> c.pressed })
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onToggle() },
+                            onDoubleTap = {
+                                scale = 1f
+                                offX = 0f
+                                offY = 0f
+                            },
+                        )
+                    },
+            )
+        } else {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+private fun StatusVideoPage(
+    vm: PlayerViewModel,
+    item: StatusItem,
+    active: Boolean,
+    bars: Boolean,
+    onToggle: () -> Unit,
+) {
+    val ctx = LocalContext.current
+    var player by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
+    var pos by remember { mutableLongStateOf(0L) }
+    var dur by remember { mutableLongStateOf(0L) }
+    var playing by remember { mutableStateOf(false) }
+
+    // مشغل خاص بالحالة: من غير إشعار ولا جلسة ميديا، ويتقفل أول ما تسيب الصفحة
+    DisposableEffect(active) {
+        if (active) {
+            vm.controller?.pause()
+            val attrs = androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build()
+            val p = androidx.media3.exoplayer.ExoPlayer.Builder(ctx)
+                .setAudioAttributes(attrs, true)
+                .setHandleAudioBecomingNoisy(true)
+                .build()
+            p.setMediaItem(androidx.media3.common.MediaItem.fromUri(item.uri))
+            p.prepare()
+            p.playWhenReady = true
+            player = p
+            onDispose {
+                p.release()
+                player = null
+                playing = false
+            }
+        } else {
+            onDispose { }
+        }
+    }
+
+    // يقف لما التطبيق يروح للخلفية
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, player) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) player?.pause()
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
+    LaunchedEffect(player) {
+        val p = player
+        while (p != null) {
+            pos = p.currentPosition
+            dur = if (p.duration > 0L) p.duration else 0L
+            playing = p.isPlaying
+            kotlinx.coroutines.delay(250)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        androidx.compose.ui.viewinterop.AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { c ->
+                androidx.media3.ui.PlayerView(c).apply {
+                    useController = false
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                }
+            },
+            update = { v -> if (v.player !== player) v.player = player },
+            onRelease = { v -> v.player = null },
+        )
+        // لمسة وحدة بس تخفي/تظهر الأزرار (من غير إيماءات تانية)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) { detectTapGestures(onTap = { onToggle() }) },
+        )
+        if (bars && active) {
+            androidx.compose.material3.Surface(
+                shape = CircleShape,
+                color = Color(0x73000000),
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        val p = player
+                        if (p != null) {
+                            if (p.isPlaying) {
+                                p.pause()
+                            } else {
+                                if (p.playbackState == androidx.media3.common.Player.STATE_ENDED) p.seekTo(0L)
+                                p.play()
+                            }
+                        }
+                    },
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Ico(if (playing) R.drawable.ic_pause else R.drawable.ic_play, null, Modifier.size(30.dp))
+                }
+            }
+            if (dur > 0L) {
+                androidx.compose.material3.Slider(
+                    value = (pos.toFloat() / dur.toFloat()).coerceIn(0f, 1f),
+                    onValueChange = { f ->
+                        pos = (f * dur).toLong()
+                        player?.seekTo(pos)
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                )
             }
         }
     }

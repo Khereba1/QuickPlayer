@@ -26,7 +26,7 @@
     <string name="perm_open_settings">فتح إعدادات التطبيق</string>
 
     <string name="empty_list">مفيش ملفات هنا.</string>
-    <string name="empty_playlists_hint">لسه معندكش قوائم تشغيل. اعمل واحدة، وبعدين ضيف ملفات ليها من القائمة ⋮ اللي جنب أي ملف.</string>
+    <string name="empty_playlists_hint">لسه معندكش قوائم تشغيل. دوس + عشان تعمل واحدة، وبعدين ضيف ملفات ليها من القائمة ⋮ اللي جنب أي ملف.</string>
     <string name="empty_playlist">القائمة فاضية. ضيف ملفات ليها من القائمة ⋮ اللي جنب أي ملف.</string>
 
     <string name="menu_play_next">تشغيل بعده</string>

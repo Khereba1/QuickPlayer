@@ -424,12 +424,13 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         stringResource(R.string.tab_playlists),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { creating = true }) {
@@ -473,6 +474,12 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
             }
             items(vm.playlists.keys.toList()) { name ->
                 PlaylistRow(R.drawable.ic_playlist, name, vm.entriesFor(vm.playlists[name] ?: emptyList()).size) { open = "pl:$name" }
+            }
+            item {
+                TextButton(
+                    onClick = { creating = true },
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                ) { Text(stringResource(R.string.playlist_new_plus)) }
             }
             if (vm.playlists.isEmpty()) {
                 item {

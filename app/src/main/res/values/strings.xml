@@ -28,7 +28,7 @@
     <string name="perm_open_settings">Open app settings</string>
 
     <string name="empty_list">No files here.</string>
-    <string name="empty_playlists_hint">No playlists yet. Create one, then add files to it from the ⋮ menu next to any file.</string>
+    <string name="empty_playlists_hint">No playlists yet. Tap + to create one, then add files to it from the ⋮ menu next to any file.</string>
     <string name="empty_playlist">This list is empty. Add files from the ⋮ menu next to any file.</string>
 
     <string name="menu_play_next">Play next</string>
