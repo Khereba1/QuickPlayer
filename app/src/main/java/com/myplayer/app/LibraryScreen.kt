@@ -422,6 +422,9 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
     if (current == null) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
+                PlaylistRow(R.drawable.ic_status, stringResource(R.string.status_title), 0, stringResource(R.string.status_sub)) { open = "status" }
+            }
+            item {
                 PlaylistRow(R.drawable.ic_favorite, stringResource(R.string.favorites_title), vm.entriesFor(vm.favorites.toList()).size) { open = "fav" }
             }
             item {
@@ -447,6 +450,8 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
                 }
             }
         }
+    } else if (current == "status") {
+        StatusScreen(vm = vm, onBack = { open = null })
     } else {
         val isUser = current.startsWith("pl:")
         val plName = if (isUser) current.removePrefix("pl:") else ""
@@ -531,7 +536,7 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
 }
 
 @Composable
-private fun PlaylistRow(icon: Int, title: String, count: Int, onClick: () -> Unit) {
+private fun PlaylistRow(icon: Int, title: String, count: Int, subtitle: String? = null, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -551,7 +556,7 @@ private fun PlaylistRow(icon: Int, title: String, count: Int, onClick: () -> Uni
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                stringResource(R.string.items_count, count),
+                subtitle ?: stringResource(R.string.items_count, count),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
