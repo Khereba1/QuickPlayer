@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -72,7 +73,7 @@ fun LibraryScreen(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             Column {
-                if (vm.currentItem != null && !vm.showPlayer) MiniPlayer(vm)
+                if (vm.currentItem != null && !vm.showPlayer && !vm.isStatusPlaying) MiniPlayer(vm)
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     val items = listOf(
                         Triple(R.drawable.ic_music, R.string.tab_audio, 0),
@@ -422,13 +423,47 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
     if (current == null) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
-                PlaylistRow(R.drawable.ic_status, stringResource(R.string.status_title), 0, stringResource(R.string.status_sub)) { open = "status" }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.tab_playlists),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { creating = true }) {
+                        Ico(R.drawable.ic_add, stringResource(R.string.playlist_new_plus), Modifier.size(26.dp))
+                    }
+                }
             }
             item {
-                androidx.compose.material3.HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                ) {
+                    PlaylistRow(R.drawable.ic_status, stringResource(R.string.status_title), 0, stringResource(R.string.status_sub)) { open = "status" }
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    Box(Modifier.weight(1f).height(0.5.dp).background(lineColor))
+                    Text(
+                        stringResource(R.string.my_lists),
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        letterSpacing = 1.5.sp,
+                    )
+                    Box(Modifier.weight(1f).height(0.5.dp).background(lineColor))
+                }
             }
             item {
                 PlaylistRow(R.drawable.ic_favorite, stringResource(R.string.favorites_title), vm.entriesFor(vm.favorites.toList()).size) { open = "fav" }
@@ -438,12 +473,6 @@ private fun PlaylistsTab(vm: PlayerViewModel) {
             }
             items(vm.playlists.keys.toList()) { name ->
                 PlaylistRow(R.drawable.ic_playlist, name, vm.entriesFor(vm.playlists[name] ?: emptyList()).size) { open = "pl:$name" }
-            }
-            item {
-                TextButton(
-                    onClick = { creating = true },
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                ) { Text(stringResource(R.string.playlist_new_plus)) }
             }
             if (vm.playlists.isEmpty()) {
                 item {

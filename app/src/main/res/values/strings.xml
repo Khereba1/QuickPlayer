@@ -156,6 +156,7 @@
     <string name="status_no_app">WhatsApp is not installed</string>
     <string name="status_save">Save</string>
     <string name="status_share">Share</string>
+    <string name="my_lists">MY LISTS</string>
     <string name="status_saved">Saved to Gallery</string>
     <string name="status_save_failed">Could not save</string>
     <string name="status_selected">%1$d selected</string>

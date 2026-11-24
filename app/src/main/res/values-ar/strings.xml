@@ -154,6 +154,7 @@
     <string name="status_no_app">واتساب مش متثبت</string>
     <string name="status_save">حفظ</string>
     <string name="status_share">مشاركة</string>
+    <string name="my_lists">قوائمي</string>
     <string name="status_saved">اتحفظ في المعرض</string>
     <string name="status_save_failed">مقدرش يحفظ</string>
     <string name="status_selected">%1$d محدد</string>

@@ -472,7 +472,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun markRecent(key: String) {
-        if (key.startsWith("ext:")) return
+        if (key.startsWith("ext:") || key.startsWith("status:")) return
         val list = ArrayList<String>()
         list.add(key)
         for (k in recent) if (k != key) list.add(k)
@@ -486,6 +486,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun resumePosition(entry: MediaEntry): Long {
+        if (entry.key.startsWith("status:")) return 0L
         if (!settings.resume || !qualifiesForResume(entry.isVideo, entry.durationMs)) return 0L
         val saved = prefs.getLong("pos_" + entry.key, 0L)
         if (saved < 3000L) return 0L
@@ -505,7 +506,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     private fun saveProgress(c: MediaController, force: Boolean) {
         val item = c.currentMediaItem ?: return
         val key = item.mediaId
-        if (key.startsWith("ext:")) return
+        if (key.startsWith("ext:") || key.startsWith("status:")) return
         val d = c.duration
         if (d == C.TIME_UNSET) return
         if (!qualifiesForResume(item.isVideoItem(), d)) return
@@ -857,8 +858,30 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- دورة حياة التطبيق ----------
+    /** فيديو حالات واتساب: مفيش تشغيل خلفية ولا كارت سفلي. */
+    val isStatusPlaying: Boolean
+        get() = currentItem?.mediaId?.startsWith("status:") == true
+
+    private fun stopAndClear() {
+        val c = controller ?: return
+        c.pause()
+        c.stop()
+        c.clearMediaItems()
+    }
+
+    /** إزالة الكارت السفلي (السحب مع الإمساك). */
+    fun dismissMini() {
+        showPlayer = false
+        stopAndClear()
+    }
+
     fun onAppBackgrounded() {
         val c = controller ?: return
+        if (isStatusPlaying) {
+            showPlayer = false
+            stopAndClear()
+            return
+        }
         if (c.currentMediaItem?.isVideoItem() == true) {
             // لو ضغطت زرار "تحويل لصوت" ده طلب صريح منك فمنوقفش، والإعداد بيأثر على الخروج العادي بس
             // الإعداد بيطبق بس لو خرجت من التطبيق وإنت في شاشة الفيديو نفسها؛ لو كنت راجع للقائمة وشغّلته من الشريط السفلي فهو طلب منك ويكمّل
@@ -915,6 +938,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     fun closePlayer() {
         showPlayer = false
         val c = controller ?: return
+        if (isStatusPlaying) {
+            stopAndClear()
+            return
+        }
         if (c.currentMediaItem?.isVideoItem() == true && !settings.videoBackground) c.pause()
     }
 

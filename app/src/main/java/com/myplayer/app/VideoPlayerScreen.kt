@@ -72,6 +72,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -85,6 +86,7 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
     val ctx = LocalContext.current
     val activity = ctx.findActivity()
     val item = vm.currentItem
+    val statusScope = androidx.compose.runtime.rememberCoroutineScope()
     val pip = vm.inPip
 
     var controlsVisible by remember { mutableStateOf(true) }
@@ -474,8 +476,24 @@ fun VideoPlayerScreen(vm: PlayerViewModel, onEnterPip: () -> Unit) {
                             IconButton(onClick = { showTracks = true }) {
                                 Ico(R.drawable.ic_subtitles, stringResource(R.string.tracks_title))
                             }
-                            IconButton(onClick = { vm.switchToAudioOnly(false) }) {
-                                Ico(R.drawable.ic_headphones, stringResource(R.string.audio_only))
+                            val statusUri = if (vm.isStatusPlaying) (item?.localConfiguration?.uri ?: item?.requestMetadata?.mediaUri ?: vm.entryFor(item?.mediaId ?: "")?.uri) else null
+                            if (statusUri != null) {
+                                val statusName = item?.mediaMetadata?.title?.toString() ?: "status.mp4"
+                                IconButton(onClick = { shareUri(ctx, statusUri, "video/*") }) {
+                                    Ico(R.drawable.ic_share, stringResource(R.string.status_share))
+                                }
+                                IconButton(onClick = {
+                                    statusScope.launch {
+                                        val ok = saveUriToGallery(ctx, statusUri, statusName, "video/mp4")
+                                        vm.message = if (ok) UiMessage(R.string.status_saved) else UiMessage(R.string.status_save_failed)
+                                    }
+                                }) {
+                                    Ico(R.drawable.ic_download, stringResource(R.string.status_save))
+                                }
+                            } else {
+                                IconButton(onClick = { vm.switchToAudioOnly(false) }) {
+                                    Ico(R.drawable.ic_headphones, stringResource(R.string.audio_only))
+                                }
                             }
                             IconButton(onClick = onEnterPip) {
                                 Ico(R.drawable.ic_pip, stringResource(R.string.pip))

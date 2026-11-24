@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -230,14 +231,16 @@ private fun decodeImage(ctx: Context, uri: Uri, maxSide: Int): Bitmap? {
     }
 }
 
-private suspend fun saveToGallery(ctx: Context, item: StatusItem): Boolean {
+private suspend fun saveToGallery(ctx: Context, item: StatusItem): Boolean = saveUriToGallery(ctx, item.uri, item.name, item.mime)
+
+suspend fun saveUriToGallery(ctx: Context, srcUri: Uri, name: String, mime: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
-            val video = item.isVideo
+            val video = mime.startsWith("video")
             val collection = if (video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             val values = ContentValues()
-            values.put(MediaStore.MediaColumns.DISPLAY_NAME, item.name)
-            values.put(MediaStore.MediaColumns.MIME_TYPE, item.mime)
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            values.put(MediaStore.MediaColumns.MIME_TYPE, mime)
             values.put(MediaStore.MediaColumns.RELATIVE_PATH, (if (video) "Movies/" else "Pictures/") + "QuickPlayer Statuses")
             values.put(MediaStore.MediaColumns.IS_PENDING, 1)
             val dest = ctx.contentResolver.insert(collection, values)
@@ -246,7 +249,7 @@ private suspend fun saveToGallery(ctx: Context, item: StatusItem): Boolean {
             } else {
                 var ok = false
                 try {
-                    val input = ctx.contentResolver.openInputStream(item.uri)
+                    val input = ctx.contentResolver.openInputStream(srcUri)
                     val output = ctx.contentResolver.openOutputStream(dest)
                     if (input != null && output != null) {
                         input.use { i -> output.use { o -> i.copyTo(o) } }
@@ -271,12 +274,14 @@ private suspend fun saveToGallery(ctx: Context, item: StatusItem): Boolean {
     }
 }
 
-private fun shareItem(ctx: Context, item: StatusItem) {
+private fun shareItem(ctx: Context, item: StatusItem) = shareUri(ctx, item.uri, item.mime)
+
+fun shareUri(ctx: Context, uri: Uri, mime: String) {
     try {
         val send = Intent(Intent.ACTION_SEND)
-        send.type = item.mime
-        send.putExtra(Intent.EXTRA_STREAM, item.uri)
-        send.clipData = ClipData.newRawUri("", item.uri)
+        send.type = mime
+        send.putExtra(Intent.EXTRA_STREAM, uri)
+        send.clipData = ClipData.newRawUri("", uri)
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         ctx.startActivity(Intent.createChooser(send, null))
     } catch (e: Exception) {
@@ -564,6 +569,7 @@ private fun PhotoViewer(
     var scale by remember { mutableFloatStateOf(1f) }
     var offX by remember { mutableFloatStateOf(0f) }
     var offY by remember { mutableFloatStateOf(0f) }
+    var bars by remember { mutableStateOf(true) }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         val b = bmp
@@ -588,28 +594,45 @@ private fun PhotoViewer(
                         }
                     }
                     .pointerInput(Unit) {
-                        detectTapGestures(onDoubleTap = {
-                            scale = 1f
-                            offX = 0f
-                            offY = 0f
-                        })
+                        detectTapGestures(
+                            onTap = { bars = !bars },
+                            onDoubleTap = {
+                                scale = 1f
+                                offX = 0f
+                                offY = 0f
+                            },
+                        )
                     },
             )
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .background(Color(0x66000000))
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onClose) { Ico(R.drawable.ic_back, stringResource(R.string.back), tint = Color.White) }
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = onShare) { Ico(R.drawable.ic_share, stringResource(R.string.status_share), tint = Color.White) }
-            IconButton(onClick = onSave) { Ico(R.drawable.ic_download, stringResource(R.string.status_save), tint = Color.White) }
+        if (bars) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xCC000000), Color.Transparent),
+                        ),
+                    )
+                    .statusBarsPadding()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onClose) { Ico(R.drawable.ic_back, stringResource(R.string.back), tint = Color.White) }
+                Text(
+                    text = item.name,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                IconButton(onClick = onShare) { Ico(R.drawable.ic_share, stringResource(R.string.status_share), tint = Color.White) }
+                IconButton(onClick = onSave) { Ico(R.drawable.ic_download, stringResource(R.string.status_save), tint = Color.White) }
+            }
         }
     }
 }

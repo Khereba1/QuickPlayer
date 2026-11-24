@@ -1,6 +1,20 @@
 package com.myplayer.app
 
 import android.graphics.Bitmap
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.matchParentSize
+import kotlin.math.abs
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -228,15 +242,86 @@ fun MiniPlayer(vm: PlayerViewModel, modifier: Modifier = Modifier) {
     val item = vm.currentItem ?: return
     val entry = vm.entryFor(item.mediaId)
     val isVideo = item.isVideoItem()
-    Surface(
+
+    // السحب مع الإمساك لإزالة الكارت: اسحب أكتر من العتبة وفضّل ماسك لحد ما الدايرة تتملي
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val thresholdPx = with(density) { 96.dp.toPx() }
+    val offsetX = remember { Animatable(0f) }
+    val hold = remember { Animatable(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val armed = dragging && abs(offsetX.value) > thresholdPx
+
+    LaunchedEffect(armed) {
+        if (armed) {
+            hold.animateTo(1f, tween(800))
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            vm.dismissMini()
+        } else {
+            hold.animateTo(0f, tween(150))
+        }
+    }
+
+    val reveal = (abs(offsetX.value) / thresholdPx).coerceIn(0f, 1f)
+    val onLeft = offsetX.value > 0f
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 3.dp,
-        shadowElevation = 6.dp,
     ) {
+        // الطبقة الحمراء اللي بتظهر ورا الكارت
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFFD32F2F).copy(alpha = 0.15f + 0.85f * reveal)),
+            contentAlignment = if (onLeft) Alignment.CenterStart else Alignment.CenterEnd,
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 22.dp)
+                    .size(44.dp)
+                    .graphicsLayer(scaleX = 0.6f + 0.4f * reveal, scaleY = 0.6f + 0.4f * reveal, alpha = reveal),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    progress = { hold.value },
+                    modifier = Modifier.size(44.dp),
+                    color = Color.White,
+                    trackColor = Color(0x44FFFFFF),
+                    strokeWidth = 3.dp,
+                )
+                Ico(R.drawable.ic_delete, null, Modifier.size(22.dp), tint = Color.White)
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragging = true },
+                        onDragEnd = {
+                            dragging = false
+                            scope.launch { offsetX.animateTo(0f, spring()) }
+                        },
+                        onDragCancel = {
+                            dragging = false
+                            scope.launch { offsetX.animateTo(0f, spring()) }
+                        },
+                        onHorizontalDrag = { change, dx ->
+                            change.consume()
+                            scope.launch { offsetX.snapTo(offsetX.value + dx) }
+                        },
+                    )
+                },
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 6.dp,
+        ) {
         Column {
             Row(
                 modifier = Modifier
@@ -285,6 +370,8 @@ fun MiniPlayer(vm: PlayerViewModel, modifier: Modifier = Modifier) {
                     trackColor = Color.Transparent,
                 )
             }
+        }
+
         }
     }
 }
