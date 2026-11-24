@@ -155,7 +155,12 @@
     <string name="status_save">حفظ</string>
     <string name="status_share">مشاركة</string>
     <string name="my_lists">قوائمي</string>
-    <string name="status_saved">اتحفظ في المعرض</string>
+    <string name="status_saved">اتحفظ في Download/QuickPlayer/Statuses</string>
+    <string name="log_enable_title">حفظ سجل النشاط</string>
+    <string name="log_enable_desc">بيسجّل أحداث التطبيق في ملف عشان تساعد في معرفة المشاكل. مقفول افتراضياً.</string>
+    <string name="log_save_downloads">حفظ السجل في التنزيلات</string>
+    <string name="log_save_desc">Download/QuickPlayer/Logs</string>
+    <string name="log_saved">السجل اتحفظ في Download/QuickPlayer/Logs</string>
     <string name="status_save_failed">مقدرش يحفظ</string>
     <string name="status_selected">%1$d محدد</string>
     <string name="pause_call_title">إيقاف التشغيل وقت المكالمات</string>

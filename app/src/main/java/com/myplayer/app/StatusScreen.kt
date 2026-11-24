@@ -246,12 +246,11 @@ private suspend fun saveToGallery(ctx: Context, item: StatusItem): Boolean = sav
 suspend fun saveUriToGallery(ctx: Context, srcUri: Uri, name: String, mime: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
-            val video = mime.startsWith("video")
-            val collection = if (video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val values = ContentValues()
             values.put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             values.put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, (if (video) "Movies/" else "Pictures/") + "QuickPlayer Statuses")
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/QuickPlayer/Statuses")
             values.put(MediaStore.MediaColumns.IS_PENDING, 1)
             val dest = ctx.contentResolver.insert(collection, values)
             if (dest == null) {

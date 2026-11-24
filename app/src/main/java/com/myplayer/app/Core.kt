@@ -48,10 +48,23 @@ object AppLog {
 
     private var appContext: Context? = null
     private var startedAt = 0L
+    private val buffer = java.util.ArrayDeque<String>()
+    private const val MAX_LINES = 300
+
+    @Volatile
+    var enabled = false
+        private set
+
+    /** تشغيل/إيقاف كتابة السجل على الملف. الإيقاف: آخر سطور بتتحفظ في الذاكرة بس (للكراش). */
+    fun setEnabled(v: Boolean) {
+        enabled = v
+        appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putBoolean("log_enabled", v)?.apply()
+    }
 
     fun init(context: Context) {
         if (file != null) return
         appContext = context.applicationContext
+        enabled = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("log_enabled", false)
         startedAt = SystemClock.elapsedRealtime()
         file = File(context.filesDir, "app.log")
         val previous = Thread.getDefaultUncaughtExceptionHandler()
@@ -84,11 +97,10 @@ object AppLog {
         log("APP", "Started. Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL)
     }
 
-    /** بيحفظ نسخة من الكراش في مجلد Download (QuickPlayer-crash.txt) عشان تقدر تبعتها حتى لو التطبيق مش بيفتح. */
-    private fun exportCrash(threadName: String, error: Throwable) {
-        val ctx = appContext ?: return
-        try {
-            val name = "QuickPlayer-crash.txt"
+    /** بيكتب ملف نصي في Download/QuickPlayer/Logs (بيستبدل القديم بنفس الاسم). */
+    fun writeToDownloads(name: String, text: String): Boolean {
+        val ctx = appContext ?: return false
+        return try {
             val resolver = ctx.contentResolver
             try {
                 resolver.delete(MediaStore.Downloads.EXTERNAL_CONTENT_URI, MediaStore.Downloads.DISPLAY_NAME + "=?", arrayOf(name))
@@ -98,39 +110,59 @@ object AppLog {
             val values = ContentValues()
             values.put(MediaStore.Downloads.DISPLAY_NAME, name)
             values.put(MediaStore.Downloads.MIME_TYPE, "text/plain")
-            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
-            val text = "QuickPlayer crash\n" +
-                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "\n" +
-                "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL + "\n" +
-                "Thread: " + threadName + "\n\n" + Log.getStackTraceString(error) + "\n\n----- recent log -----\n" + read().takeLast(6000)
-            resolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/QuickPlayer/Logs")
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            if (uri == null) {
+                false
+            } else {
+                resolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                true
+            }
         } catch (e: Throwable) {
-            // ignore
+            false
         }
+    }
+
+    fun saveLogToDownloads(): Boolean = writeToDownloads("QuickPlayer-log.txt", read().ifBlank { "(empty)" })
+
+    /** بيحفظ نسخة من الكراش في Download/QuickPlayer/Logs عشان تقدر تبعتها حتى لو التطبيق مش بيفتح. */
+    private fun exportCrash(threadName: String, error: Throwable) {
+        val text = "QuickPlayer crash\n" +
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "\n" +
+            "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + "), " + Build.MANUFACTURER + " " + Build.MODEL + "\n" +
+            "Thread: " + threadName + "\n\n" + Log.getStackTraceString(error) + "\n\n----- recent log -----\n" + read().takeLast(6000)
+        writeToDownloads("QuickPlayer-crash.txt", text)
     }
 
     fun log(tag: String, message: String, error: Throwable? = null) {
         Log.i("QuickPlayer/" + tag, message)
-        val f = file ?: return
+        val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+        val sb = StringBuilder()
+        sb.append(time).append(" [").append(tag).append("] ").append(message).append('\n')
+        if (error != null) sb.append(Log.getStackTraceString(error)).append('\n')
+        val entry = sb.toString()
         synchronized(lock) {
-            try {
-                if (f.exists() && f.length() > MAX_BYTES) {
-                    val text = f.readText()
-                    f.writeText(text.takeLast(MAX_BYTES / 2))
+            buffer.addLast(entry)
+            while (buffer.size > MAX_LINES) buffer.removeFirst()
+            val f = file
+            if (enabled && f != null) {
+                try {
+                    if (f.exists() && f.length() > MAX_BYTES) {
+                        val text = f.readText()
+                        f.writeText(text.takeLast(MAX_BYTES / 2))
+                    }
+                    f.appendText(entry)
+                } catch (e: Throwable) {
+                    // ignore
                 }
-                val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-                val sb = StringBuilder()
-                sb.append(time).append(" [").append(tag).append("] ").append(message).append('\n')
-                if (error != null) sb.append(Log.getStackTraceString(error)).append('\n')
-                f.appendText(sb.toString())
-            } catch (e: Throwable) {
-                // ignore
             }
         }
     }
 
     fun read(): String {
+        if (!enabled) {
+            return synchronized(lock) { buffer.joinToString("") }
+        }
         val f = file ?: return ""
         return try {
             if (f.exists()) f.readText() else ""
@@ -140,6 +172,7 @@ object AppLog {
     }
 
     fun clear() {
+        synchronized(lock) { buffer.clear() }
         try {
             file?.writeText("")
         } catch (e: Throwable) {

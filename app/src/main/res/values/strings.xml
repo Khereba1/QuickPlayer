@@ -157,7 +157,12 @@
     <string name="status_save">Save</string>
     <string name="status_share">Share</string>
     <string name="my_lists">MY LISTS</string>
-    <string name="status_saved">Saved to Gallery</string>
+    <string name="status_saved">Saved to Download/QuickPlayer/Statuses</string>
+    <string name="log_enable_title">Save activity log</string>
+    <string name="log_enable_desc">Records app events to a file to help find problems. Off by default.</string>
+    <string name="log_save_downloads">Save log to Downloads</string>
+    <string name="log_save_desc">Download/QuickPlayer/Logs</string>
+    <string name="log_saved">Log saved to Download/QuickPlayer/Logs</string>
     <string name="status_save_failed">Could not save</string>
     <string name="status_selected">%1$d selected</string>
     <string name="pause_call_title">Pause during calls</string>

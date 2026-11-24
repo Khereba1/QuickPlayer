@@ -164,7 +164,15 @@ fun SettingsScreen(vm: PlayerViewModel, onLanguageChanged: () -> Unit) {
 
         // ---- التشخيص ----
         SectionTitle(stringResource(R.string.diagnostics))
+        var logOn by remember { mutableStateOf(AppLog.enabled) }
+        SwitchRow(stringResource(R.string.log_enable_title), stringResource(R.string.log_enable_desc), logOn) {
+            logOn = it
+            AppLog.setEnabled(it)
+        }
         ClickRow(stringResource(R.string.view_log), null) { showLog = true }
+        ClickRow(stringResource(R.string.log_save_downloads), stringResource(R.string.log_save_desc)) {
+            vm.message = if (AppLog.saveLogToDownloads()) UiMessage(R.string.log_saved) else UiMessage(R.string.status_save_failed)
+        }
 
         // ---- حول ----
         SectionTitle(stringResource(R.string.settings_about))
